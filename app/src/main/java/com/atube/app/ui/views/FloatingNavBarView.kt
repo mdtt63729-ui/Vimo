@@ -1,7 +1,6 @@
 package com.atube.app.ui.views
 
 import android.animation.ArgbEvaluator
-import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -16,9 +15,12 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.OvershootInterpolator
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.dynamicanimation.animation.DynamicAnimation
+import androidx.dynamicanimation.animation.FloatValueHolder
+import androidx.dynamicanimation.animation.SpringAnimation
+import androidx.dynamicanimation.animation.SpringForce
 import com.google.android.material.color.MaterialColors
 import kotlin.math.abs
 import kotlin.math.floor
@@ -30,13 +32,15 @@ import kotlin.math.roundToInt
  * `FloatingNavBar` into a plain View.
  *
  * One animated value — the fractional position of the selection — drives
- * everything: each slot's width, the label fades and the indicator itself. That
- * is what makes the shift seamless. Animating the slots and the pill separately
- * lets them drift a frame apart, and drawing a pill per item puts two of them on
- * screen mid-switch.
+ * everything: each slot's width, the label fades and the indicator itself. That is
+ * what makes the shift seamless. Animating the slots and the pill separately lets
+ * them drift a frame apart, and drawing a pill per item puts two of them on screen
+ * mid-switch.
  *
- * The row always fills the bar, so the bar itself never jumps around while the
- * selection grows one slot and shrinks another.
+ * The motion matches Off exactly: the selection position runs on a spring with a
+ * 0.78 damping ratio at medium-low stiffness, and each icon dips to 0.92 with a
+ * stiff spring on touch. An overshoot interpolator gives a different feel — it
+ * bounces past the target instead of settling into it.
  */
 class FloatingNavBarView @JvmOverloads constructor(
     context: Context,
@@ -54,10 +58,12 @@ class FloatingNavBarView @JvmOverloads constructor(
     private val pillDrawable = GradientDrawable()
 
     private val argbEvaluator = ArgbEvaluator()
-    private var animator: ValueAnimator? = null
 
     /** Animated selection position, e.g. 1.4 means 40% of the way from slot 1 to 2. */
     private var progress = 0f
+
+    private val progressHolder = FloatValueHolder(0f)
+    private var progressSpring: SpringAnimation? = null
 
     private val iconSlotPx = dp(56f)
     private val labelGapPx = dp(8f)
@@ -130,6 +136,7 @@ class FloatingNavBarView @JvmOverloads constructor(
 
         val index = newItems.indexOfFirst { it.itemId == selectedItemId }
         progress = (if (index >= 0) index else 0).toFloat()
+        progressHolder.setValue(progress)
         applySlotStyles()
         requestLayout()
     }
@@ -137,7 +144,8 @@ class FloatingNavBarView @JvmOverloads constructor(
     /** Moves the pill to the given item, animating if the bar is already on screen. */
     fun setSelectedItem(itemId: Int, animate: Boolean = true) {
         val index = items.indexOfFirst { it.itemId == itemId }
-        if (index < 0 || index == progress.roundToInt()) return
+        if (index < 0) return
+        if (progress.roundToInt() == index && progressSpring?.isRunning != true) return
         animateTo(index.toFloat(), animate)
     }
 
@@ -166,19 +174,26 @@ class FloatingNavBarView @JvmOverloads constructor(
     }
 
     private fun animateTo(target: Float, animate: Boolean) {
-        animator?.cancel()
+        progressSpring?.cancel()
+
         if (!animate || !isAttachedToWindow) {
             progress = target
+            progressHolder.setValue(target)
             applySlotStyles()
             requestLayout()
+            invalidate()
             return
         }
-        animator = ValueAnimator.ofFloat(progress, target).apply {
-            duration = 380
-            // Enough bounce to feel alive, not so much that the label overshoots its slot.
-            interpolator = OvershootInterpolator(0.9f)
-            addUpdateListener {
-                progress = it.animatedValue as Float
+
+        progressHolder.setValue(progress)
+        progressSpring = SpringAnimation(progressHolder).apply {
+            // Same spring as Off: enough bounce to feel alive, not so much that the
+            // label overshoots its slot.
+            spring = SpringForce(target)
+                .setDampingRatio(SPRING_DAMPING)
+                .setStiffness(SPRING_STIFFNESS)
+            addUpdateListener { _, value, _ ->
+                progress = value
                 applySlotStyles()
                 requestLayout()
                 invalidate()
@@ -299,8 +314,8 @@ class FloatingNavBarView @JvmOverloads constructor(
     }
 
     override fun onDetachedFromWindow() {
-        animator?.cancel()
-        animator = null
+        progressSpring?.cancel()
+        progressSpring = null
         super.onDetachedFromWindow()
     }
 
@@ -325,6 +340,9 @@ class FloatingNavBarView @JvmOverloads constructor(
         val icon = ImageView(context)
         val label = TextView(context)
 
+        private var scaleXSpring: SpringAnimation? = null
+        private var scaleYSpring: SpringAnimation? = null
+
         init {
             clipChildren = true
             isClickable = true
@@ -336,8 +354,10 @@ class FloatingNavBarView @JvmOverloads constructor(
             icon.isClickable = false
 
             label.text = item.label
+            // Off uses Material's labelLarge: 14 sp, medium weight, a little tracking.
             label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             label.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            label.letterSpacing = 0.01f
             label.includeFontPadding = false
             label.isSingleLine = true
             label.ellipsize = TextUtils.TruncateAt.END
@@ -347,19 +367,30 @@ class FloatingNavBarView @JvmOverloads constructor(
             addView(icon)
             addView(label)
 
-            // The press dip from Off: 0.92 while held, springing back on release.
+            // Off's press dip: 0.92 while held, released on a stiff spring.
             setOnTouchListener { _, event ->
                 when (event.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> {
-                        animate().scaleX(0.92f).scaleY(0.92f).setDuration(90).start()
-                        false
-                    }
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        animate().scaleX(1f).scaleY(1f).setDuration(180).start()
-                        false
-                    }
+                    MotionEvent.ACTION_DOWN -> { springTo(0.92f); false }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { springTo(1f); false }
                     else -> false
                 }
+            }
+        }
+
+        private fun springTo(target: Float) {
+            scaleXSpring?.cancel()
+            scaleYSpring?.cancel()
+            scaleXSpring = SpringAnimation(this, DynamicAnimation.SCALE_X, target).apply {
+                spring = SpringForce(target)
+                    .setDampingRatio(PRESS_DAMPING)
+                    .setStiffness(SpringForce.STIFFNESS_HIGH)
+                start()
+            }
+            scaleYSpring = SpringAnimation(this, DynamicAnimation.SCALE_Y, target).apply {
+                spring = SpringForce(target)
+                    .setDampingRatio(PRESS_DAMPING)
+                    .setStiffness(SpringForce.STIFFNESS_HIGH)
+                start()
             }
         }
 
@@ -410,6 +441,12 @@ class FloatingNavBarView @JvmOverloads constructor(
     private companion object {
         const val ICON_SLOT_DP = 56f
         const val LABEL_GAP_DP = 8f
+
+        // Off's springs: 0.78 damping at medium-low stiffness for the selection,
+        // 0.40 at high stiffness for the press.
+        const val SPRING_DAMPING = 0.78f
+        const val SPRING_STIFFNESS = 400f
+        const val PRESS_DAMPING = 0.40f
     }
 }
 
