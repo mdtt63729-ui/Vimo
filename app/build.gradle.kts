@@ -34,13 +34,16 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.atube.app"
+        // Published package name. The Kotlin packages stay as they are: they are
+        // internal, and renaming them would mean touching every file for no user
+        // visible gain.
+        applicationId = "aos.vimo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 77
-        versionName = "33.4"
+        versionCode = 78
+        versionName = "33.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        resValue("string", "app_name", "A Tube")
+        resValue("string", "app_name", "Vimo")
 
         // Chaquopy builds a Python runtime per ABI, and shipping four of them would
         // roughly quadruple the APK. For now the app is arm64 only; x86_64 (for the
@@ -84,7 +87,7 @@ android {
         getByName("debug") {
             isDebuggable = true
             applicationIdSuffix = ".debug"
-            resValue("string", "app_name", "A Tube")
+            resValue("string", "app_name", "Vimo")
         }
     }
 

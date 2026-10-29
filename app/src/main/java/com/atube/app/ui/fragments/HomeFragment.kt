@@ -10,6 +10,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.atube.app.R
 import com.atube.app.recommendation.models.HomeFeedState
 import com.atube.app.recommendation.models.HomeUiStatus
+import com.atube.app.helpers.NetworkQuality
+import com.atube.app.ui.activities.MainActivity
 import com.atube.app.ui.adapters.HomeFeedAdapter
 import com.atube.app.ui.models.HomeViewModel
 import com.atube.app.helpers.StreamPrefetchManager
@@ -189,34 +191,54 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             HomeUiStatus.EMPTY -> {
                 binding.progress.isVisible = false
                 binding.refresh.isRefreshing = false
-                binding.homeFeedRV.isVisible = false
-                binding.nothingHere.isVisible = true
                 binding.changeInstance.isVisible = false
-                binding.emptyText.text = getString(R.string.emptyList)
+                showPlaceholderOrKeepFeed(getString(R.string.emptyList))
             }
 
             HomeUiStatus.ERROR -> {
                 binding.progress.isVisible = false
                 binding.refresh.isRefreshing = false
-                binding.homeFeedRV.isVisible = false
-                binding.nothingHere.isVisible = true
                 binding.changeInstance.isVisible = false
-                // Say what actually failed. A bare "Retry" that comes back every
-                // time leaves no way to tell a dead instance from a bug, and the
-                // exception message is the one clue the screen can show.
-                val reason = state.error?.message?.takeIf { it.isNotBlank() }
-                binding.emptyText.text = reason ?: getString(R.string.emptyList)
+                if (hasFeedContent()) {
+                    // Videos are already on screen: a failed request must never
+                    // throw them away and replace them with an error page. A link
+                    // that is up but very slow is the usual cause, so say that
+                    // instead - from the bottom of the screen.
+                    binding.homeFeedRV.isVisible = true
+                    binding.nothingHere.isVisible = false
+                    (activity as? MainActivity)?.maybeWarnAboutLowNetwork()
+                } else {
+                    val reason = state.error?.message?.takeIf { it.isNotBlank() }
+                    showPlaceholderOrKeepFeed(reason ?: getString(R.string.emptyList))
+                }
             }
 
             HomeUiStatus.OFFLINE -> {
                 binding.progress.isVisible = false
                 binding.refresh.isRefreshing = false
-                binding.homeFeedRV.isVisible = false
-                binding.nothingHere.isVisible = true
                 binding.changeInstance.isVisible = false
-                binding.emptyText.text = getString(R.string.emptyList)
+                showPlaceholderOrKeepFeed(getString(R.string.emptyList))
             }
         }
+    }
+
+    private fun hasFeedContent(): Boolean = homeFeedAdapter.itemCount > 0
+
+    /**
+     * Shows the placeholder only when the feed is genuinely empty, and the Retry
+     * button only when the device is offline. With a working connection a retry
+     * just repeats the same failing request, which is what made this page feel like
+     * it kept coming back on its own.
+     */
+    private fun showPlaceholderOrKeepFeed(message: String) {
+        val hasContent = hasFeedContent()
+        binding.nothingHere.isVisible = hasContent.not()
+        binding.homeFeedRV.isVisible = hasContent
+
+        if (hasContent) return
+
+        binding.emptyText.text = message
+        binding.refreshButton.isVisible = NetworkQuality.isOffline(requireContext())
     }
 
     private fun prefetchTopVideos(items: List<com.atube.app.recommendation.models.HomeFeedItem>) {

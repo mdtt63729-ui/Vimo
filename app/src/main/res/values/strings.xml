@@ -601,4 +601,10 @@
     <string name="floating_nav_bar">Floating navigation bar</string>
     <string name="floating_nav_bar_summary">Use the pill-shaped floating bar instead of the standard bottom bar</string>
 
+
+    <!-- Shown when the connection is up but the link estimate is very low -->
+    <string name="close">Close</string>
+    <string name="low_network_title">Low network quality</string>
+    <string name="low_network_message">Your network quality is very low. Please check your connection.</string>
+
 </resources>

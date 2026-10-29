@@ -57,6 +57,29 @@ open class BaseActivity : AppCompatActivity() {
         enableEdgeToEdge()
 
         super.onCreate(savedInstanceState)
+
+        applyMaxRefreshRate()
+    }
+
+    /**
+     * Ask the display for its fastest mode.
+     *
+     * Left alone, Android settles on 60 Hz for a list that is not scrolling, so
+     * page changes and the nav bar animation run at half the panel's rate and feel
+     * heavy. Pinning the window to the panel's highest mode keeps the UI at the
+     * rate the screen can actually do (120 Hz on most current phones).
+     */
+    private fun applyMaxRefreshRate() {
+        try {
+            @Suppress("DEPRECATION")
+            val display = windowManager.defaultDisplay
+            val fastest = display.supportedModes.maxByOrNull { it.refreshRate } ?: return
+            window.attributes = window.attributes.apply {
+                preferredDisplayModeId = fastest.modeId
+            }
+        } catch (_: Throwable) {
+            // Some OEM builds reject this; the default refresh rate stays.
+        }
     }
 
     override fun attachBaseContext(newBase: Context?) {

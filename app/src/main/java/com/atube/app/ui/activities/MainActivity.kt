@@ -1,6 +1,9 @@
 package com.atube.app.ui.activities
 
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
@@ -13,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.widget.SearchView
 import androidx.constraintlayout.motion.widget.Key
+import androidx.core.content.getSystemService
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.net.toUri
 import androidx.core.os.bundleOf
@@ -20,6 +24,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.allViews
 import androidx.core.view.children
 import androidx.core.view.isNotEmpty
+import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
@@ -47,6 +52,7 @@ import com.atube.app.helpers.IntentHelper
 import com.atube.app.helpers.NavBarHelper
 import com.atube.app.helpers.NavigationHelper
 import com.atube.app.helpers.NetworkHelper
+import com.atube.app.helpers.NetworkQuality
 import com.atube.app.helpers.PreferenceHelper
 import com.atube.app.helpers.ThemeHelper
 import com.atube.app.parcelable.PlayerData
@@ -77,7 +83,12 @@ class MainActivity : AbstractPlayerHostActivity() {
     private var lastNavTimeMs: Long = 0L
     private companion object {
         const val NAV_DEBOUNCE_MS = 200L
+        const val LOW_NETWORK_WARNING_INTERVAL_MS = 120_000L
+        const val LOW_NETWORK_POPUP_VISIBLE_MS = 6_000L
     }
+
+    /** Last time the low-network card was shown, so it cannot repeat in a burst. */
+    private var lastLowNetworkWarningAt = 0L
 
     private val subscriptionsViewModel: SubscriptionsViewModel by viewModels()
 
@@ -194,6 +205,9 @@ class MainActivity : AbstractPlayerHostActivity() {
         // standard bottom bar or the floating pill bar, depending on the setting
         setUpNavBarMode()
 
+        // warn from the bottom right when the connection is up but very slow
+        setUpNetworkQualityPopup()
+
         // set default tab as start fragment
         navController.graph = navController.navInflater.inflate(R.navigation.nav).also {
             it.setStartDestination(startFragmentId)
@@ -232,6 +246,75 @@ class MainActivity : AbstractPlayerHostActivity() {
         loadIntentData()
 
         showUserInfoDialogIfNeeded()
+    }
+
+    /**
+     * Watches the connection and shows the low-network card when the link estimate
+     * drops. Debounced, so a flapping connection cannot spam the screen.
+     */
+    private fun setUpNetworkQualityPopup() {
+        binding.networkPopupClose.setOnClickListener { hideNetworkPopup() }
+
+        val connectivityManager = getSystemService<ConnectivityManager>() ?: return
+        try {
+            connectivityManager.registerDefaultNetworkCallback(
+                object : ConnectivityManager.NetworkCallback() {
+                    override fun onCapabilitiesChanged(
+                        network: Network,
+                        networkCapabilities: NetworkCapabilities
+                    ) {
+                        runOnUiThread { maybeWarnAboutLowNetwork() }
+                    }
+
+                    override fun onLost(network: Network) {
+                        runOnUiThread { hideNetworkPopup() }
+                    }
+                }
+            )
+        } catch (_: Throwable) {
+            // some OEM builds refuse the callback; the warning is best-effort
+        }
+    }
+
+    /**
+     * Show the low-network card, at most once every two minutes.
+     *
+     * Screens call this when a load fails while the device is still online, which
+     * is the case that used to fall through to the "Retry" page.
+     */
+    fun maybeWarnAboutLowNetwork() {
+        if (NetworkQuality.level(this) != NetworkQuality.Level.LOW) return
+
+        val now = System.currentTimeMillis()
+        if (now - lastLowNetworkWarningAt < LOW_NETWORK_WARNING_INTERVAL_MS) return
+        lastLowNetworkWarningAt = now
+
+        showNetworkPopup()
+    }
+
+    private fun showNetworkPopup() {
+        if (!this::binding.isInitialized) return
+        val popup = binding.networkPopup
+        if (popup.isVisible) return
+
+        popup.visibility = View.VISIBLE
+        popup.alpha = 0f
+        popup.translationY = 32f * resources.displayMetrics.density
+        popup.animate().alpha(1f).translationY(0f).setDuration(220).start()
+        popup.postDelayed({ hideNetworkPopup() }, LOW_NETWORK_POPUP_VISIBLE_MS)
+    }
+
+    private fun hideNetworkPopup() {
+        if (!this::binding.isInitialized) return
+        val popup = binding.networkPopup
+        if (!popup.isVisible) return
+
+        popup.animate()
+            .alpha(0f)
+            .translationY(24f * resources.displayMetrics.density)
+            .setDuration(180)
+            .withEndAction { popup.visibility = View.GONE }
+            .start()
     }
 
     /**
