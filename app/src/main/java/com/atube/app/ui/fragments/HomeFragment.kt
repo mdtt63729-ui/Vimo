@@ -110,6 +110,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
         // Swipe to refresh
         binding.refresh.setOnRefreshListener {
+            showRefreshIndicator(true)
             homeViewModel.loadRecommendationFeed(requireContext(), forceRefresh = true)
         }
 
@@ -146,6 +147,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private fun showFeed(state: HomeFeedState) {
         categoryChipsAdapter.setSelectedCategory(state.selectedCategory)
+        // the indicator belongs to the refresh gesture only
+        showRefreshIndicator(state.status == HomeUiStatus.LOADING && state.isRefreshing)
 
         when (state.status) {
             HomeUiStatus.INITIALIZING -> {
@@ -220,6 +223,10 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 showPlaceholderOrKeepFeed(getString(R.string.emptyList))
             }
         }
+    }
+
+    private fun showRefreshIndicator(show: Boolean) {
+        binding.refreshIndicatorContainer.isVisible = show
     }
 
     private fun hasFeedContent(): Boolean = homeFeedAdapter.itemCount > 0

@@ -98,6 +98,27 @@
                 android:text="@string/change_instance" />
         </LinearLayout>
 
+
+        <!-- Material 3 loading indicator, contained, in place of the old pull-to-refresh
+             spinner. Same size and same spot; only the design changes. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/refresh_indicator_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp">
+
+            <com.google.android.material.loadingindicator.LoadingIndicator
+                android:id="@+id/refresh_indicator"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_margin="8dp" />
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Only used before the feed has anything to show: once the feed is
              loading, its own skeleton cards are the loading indicator. -->
         <com.google.android.material.loadingindicator.LoadingIndicator

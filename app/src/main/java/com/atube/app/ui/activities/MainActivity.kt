@@ -85,12 +85,17 @@ class MainActivity : AbstractPlayerHostActivity() {
         const val NAV_DEBOUNCE_MS = 200L
         const val LOW_NETWORK_WARNING_INTERVAL_MS = 120_000L
         const val LOW_NETWORK_POPUP_VISIBLE_MS = 6_000L
+        const val HOME_DOUBLE_TAP_MS = 400L
     }
+
+    /** Last time Home was tapped, for the double-tap refresh gesture. */
+    private var lastHomeTapAt = 0L
 
     /** Last time the low-network card was shown, so it cannot repeat in a burst. */
     private var lastLowNetworkWarningAt = 0L
 
     private val subscriptionsViewModel: SubscriptionsViewModel by viewModels()
+    private val homeViewModel: com.atube.app.ui.models.HomeViewModel by viewModels()
 
     // search related stuff
     private lateinit var searchView: SearchView
@@ -218,8 +223,11 @@ class MainActivity : AbstractPlayerHostActivity() {
         binding.bottomNav.setOnItemReselectedListener {
             if (it.itemId != navController.currentDestination?.id) {
                 navigateToBottomSelectedItem(it)
+            } else if (it.itemId == R.id.homeFragment && registerHomeDoubleTap()) {
+                // second tap on Home within the window: refresh the feed
+                refreshHomeFeed()
             } else {
-                // get the current fragment
+                // a single tap only goes back to the top of the list
                 val fragment = navHostFragment.childFragmentManager.fragments.firstOrNull()
                 tryScrollToTop(fragment?.requireView())
             }
@@ -378,12 +386,34 @@ class MainActivity : AbstractPlayerHostActivity() {
         val menuItem = binding.bottomNav.menu.findItem(itemId) ?: return
         if (itemId != navController.currentDestination?.id) {
             navigateToBottomSelectedItem(menuItem)
+        } else if (itemId == R.id.homeFragment && registerHomeDoubleTap()) {
+            refreshHomeFeed()
         } else {
             val fragment = binding.fragment.getFragment<NavHostFragment>()
                 .childFragmentManager.fragments.firstOrNull()
             tryScrollToTop(fragment?.requireView())
         }
         binding.floatingNav.setSelectedItem(itemId)
+    }
+
+    /**
+     * True when Home was tapped a second time within [HOME_DOUBLE_TAP_MS].
+     *
+     * A single tap only scrolls back to the top; refreshing on every tap made the
+     * feed reload and change the moment the tab was touched.
+     */
+    private fun registerHomeDoubleTap(): Boolean {
+        val now = System.currentTimeMillis()
+        val isDoubleTap = now - lastHomeTapAt <= HOME_DOUBLE_TAP_MS
+        lastHomeTapAt = if (isDoubleTap) 0L else now
+        return isDoubleTap
+    }
+
+    /** Reload the feed with the skeleton placeholders visible. */
+    private fun refreshHomeFeed() {
+        if (!this::navController.isInitialized) return
+        if (navController.currentDestination?.id != R.id.homeFragment) return
+        homeViewModel.loadRecommendationFeed(this, forceRefresh = true)
     }
 
     /**

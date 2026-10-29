@@ -2,13 +2,12 @@ package com.atube.app.ui.views
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.MotionEvent.ACTION_MOVE
 import android.view.ViewConfiguration
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import com.atube.app.helpers.ThemeHelper
-import com.google.android.material.elevation.SurfaceColors
 import kotlin.math.abs
 
 class CustomSwipeToRefresh(context: Context?, attrs: AttributeSet?) :
@@ -17,12 +16,11 @@ class CustomSwipeToRefresh(context: Context?, attrs: AttributeSet?) :
     private var mPrevX = 0f
 
     init {
-        setColorSchemeColors(
-            ThemeHelper.getThemeColor(this.context, androidx.appcompat.R.attr.colorPrimary)
-        )
-        setProgressBackgroundColorSchemeColor(
-            SurfaceColors.getColorForElevation(this.context, 20f)
-        )
+        // The stock circular spinner is hidden: the screens that use this layout
+        // draw the Material 3 loading indicator in the same spot instead, so the
+        // gesture still works but the old circle never shows.
+        setColorSchemeColors(Color.TRANSPARENT)
+        setProgressBackgroundColorSchemeColor(Color.TRANSPARENT)
     }
 
     @SuppressLint("Recycle")

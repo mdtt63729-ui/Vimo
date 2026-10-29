@@ -132,7 +132,16 @@ class HomeViewModel : ViewModel() {
                 // If the API returned items, emit SUCCESS
                 // If it returned genuinely empty, emit EMPTY
                 if (state.items.isNotEmpty()) {
-                    feedState.postValue(state.copy(status = HomeUiStatus.SUCCESS))
+                    // A plain (non-forced) load keeps whatever is already on screen
+                    // and appends only new videos: replacing the list a second after
+                    // it appeared is what made the feed look like it was swapping
+                    // videos under the user's thumb.
+                    val merged = if (forceRefresh) {
+                        state.copy(status = HomeUiStatus.SUCCESS)
+                    } else {
+                        mergeWithVisible(feedState.value, state.copy(status = HomeUiStatus.SUCCESS))
+                    }
+                    feedState.postValue(merged)
                 } else {
                     feedState.postValue(state.copy(status = HomeUiStatus.EMPTY))
                 }
@@ -346,5 +355,31 @@ class HomeViewModel : ViewModel() {
             "All", "Explore", "Gaming", "Music", "AI", "Android",
             "Tech", "Creative", "News", "Sports", "Live", "Recently Uploaded"
         )
+    }
+
+    /**
+     * Keep the videos already on screen and append only the new ones, so a fetch
+     * that finishes after the feed is visible cannot reorder or replace it.
+     */
+    private fun mergeWithVisible(previous: HomeFeedState?, incoming: HomeFeedState): HomeFeedState {
+        val visible = previous?.items.orEmpty()
+        if (visible.isEmpty()) return incoming
+
+        val visibleIds = visible.mapNotNull { it.stableId() }.toSet()
+        val additions = incoming.items.filter { item ->
+            val id = item.stableId()
+            id != null && id !in visibleIds
+        }
+        if (additions.isEmpty()) return incoming.copy(items = visible)
+        return incoming.copy(items = visible + additions)
+    }
+
+    private fun com.atube.app.recommendation.models.HomeFeedItem.stableId(): String? = when (this) {
+        is com.atube.app.recommendation.models.HomeFeedItem.Video -> data.url
+        is com.atube.app.recommendation.models.HomeFeedItem.Skeleton -> id
+        is com.atube.app.recommendation.models.HomeFeedItem.ShortsShelf -> videos.firstOrNull()?.url
+        is com.atube.app.recommendation.models.HomeFeedItem.ContinueWatching -> "continue_watching"
+        is com.atube.app.recommendation.models.HomeFeedItem.Loading -> "loading"
+        is com.atube.app.recommendation.models.HomeFeedItem.AllCaughtUp -> "all_caught_up"
     }
 }
