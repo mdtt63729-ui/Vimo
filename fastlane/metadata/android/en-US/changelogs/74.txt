@@ -1,0 +1,6 @@
+* Fixed unused imports for clean GitHub Actions build
+* Removed README.md from project
+* Ultra-high-resolution thumbnails (maxresdefault 1280×720)
+* About screen with developer photo and animated wave border
+* Removed update check from settings
+* Complete A Tube branding migration

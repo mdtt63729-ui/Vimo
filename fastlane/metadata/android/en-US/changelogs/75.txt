@@ -1,0 +1,10 @@
+* Fixed all compilation errors for GitHub Actions build
+* Fixed Coil3 API: Scale.FILL and Precision.INCOMPATIBLE replaced with Size.ORIGINAL
+* Fixed nullable type mismatches in NewPipeMediaServiceRepository and OnlinePlayerService
+* Fixed DynamicThemeManager color cache type mismatch
+* Fixed duplicate View import in ShortsFragment
+* Fixed Rect.width()/height() function calls in ShimmerDrawable
+* Ultra-high-resolution thumbnails (maxresdefault 1280×720)
+* About screen with developer photo and animated wave border
+* Removed update check from settings
+* Complete A Tube branding migration

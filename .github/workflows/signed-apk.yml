@@ -1,0 +1,117 @@
+name: Build signed APK
+
+# Manual, on-demand build of a signed release APK.
+# It publishes nothing: it builds, signs, and uploads the APK as an artifact.
+#
+# Signing uses the repository's keystore secrets when they exist. If they do not,
+# the workflow generates a throwaway keystore at run time (random password, never
+# stored in the repository), signs with it, and uploads both the signed APK and
+# that keystore so the same key can be reused for later builds.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build and sign
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: "zulu"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Set up Python for the on-device yt-dlp engine
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          architecture: "x64"
+
+      - name: Build APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      # Signs with whichever naming the repository uses for its keystore secrets.
+      - name: Sign with repository secrets
+        id: sign
+        continue-on-error: true
+        uses: ilharp/sign-android-release@v2
+        with:
+          releaseDir: app/build/outputs/apk/release
+          signingKey: ${{ secrets.ANDROID_RELEASE_SIGNING_KEY || secrets.ANDROID_SIGNING_KEY }}
+          keyAlias: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS || secrets.ANDROID_KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD || secrets.ANDROID_KEY_PASSWORD }}
+          buildToolsVersion: 35.0.0
+
+      # Fallback: no keystore configured, so make one for this build only.
+      - name: Sign with a generated keystore
+        if: steps.sign.outcome != 'success'
+        run: |
+          set -e
+          BT="$ANDROID_HOME/build-tools/35.0.0"
+          if [ ! -x "$BT/apksigner" ]; then
+            BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)"
+          fi
+          echo "using build-tools: $BT"
+
+          PASS="$(openssl rand -hex 16)"
+          keytool -genkeypair -v -keystore atube-release.jks -alias atube \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -storepass "$PASS" -keypass "$PASS" \
+            -dname "CN=A Tube, O=A Tube, C=IN"
+
+          "$BT/zipalign" -f -p 4 \
+            app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+
+          "$BT/apksigner" sign \
+            --ks atube-release.jks --ks-key-alias atube \
+            --ks-pass "pass:$PASS" --key-pass "pass:$PASS" \
+            --out A-Tube-signed.apk aligned.apk
+
+          "$BT/apksigner" verify --print-certs A-Tube-signed.apk
+
+          {
+            echo "keystore file: atube-release.jks"
+            echo "key alias:     atube"
+            echo "store/key pass: $PASS"
+            echo
+            echo "Reuse this keystore for every future build, otherwise Android"
+            echo "refuses to install an update over the previous version."
+            echo "To use it from CI, add these repository secrets:"
+            echo "  ANDROID_RELEASE_SIGNING_KEY       = base64 -w0 atube-release.jks"
+            echo "  ANDROID_RELEASE_KEY_ALIAS         = atube"
+            echo "  ANDROID_RELEASE_KEYSTORE_PASSWORD = the password above"
+            echo "  ANDROID_RELEASE_KEY_PASSWORD      = the password above"
+          } > atube-keystore-credentials.txt
+
+      - name: Collect outputs
+        run: |
+          ls -l app/build/outputs/apk/release
+          if [ -f A-Tube-signed.apk ]; then cp A-Tube-signed.apk A-Tube.apk; else
+            cp app/build/outputs/apk/release/*.apk A-Tube.apk
+          fi
+          ls -l A-Tube.apk || true
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: A-Tube-apk
+          path: A-Tube.apk
+          if-no-files-found: error
+
+      - name: Upload keystore
+        if: steps.sign.outcome != 'success'
+        uses: actions/upload-artifact@v6
+        with:
+          name: A-Tube-keystore
+          path: |
+            atube-release.jks
+            atube-keystore-credentials.txt
+          if-no-files-found: error

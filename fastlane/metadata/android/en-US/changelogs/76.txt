@@ -1,0 +1,6 @@
+* Replaced all old LibreTube icons with A Tube app icon
+* All 7 alternative icon variants (bird, fire, flame, gradient, legacy, shaped, torch) now use A Tube icon
+* Replaced all icon SVG files with a_tube.svg
+* Removed LibreTube banner and social images
+* Replaced splash icon with A Tube icon
+* All previous fixes: compilation errors, thumbnails, about screen, settings, branding

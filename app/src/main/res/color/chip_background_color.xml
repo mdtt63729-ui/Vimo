@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Chip background, YouTube style: a light grey pill when unselected, near-black
+  when selected (and the reverse in dark mode). The light and dark values live in
+  values/colors.xml and values-night/colors.xml.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/chip_bg_selected" android:state_checked="true" />
+    <item android:color="@color/chip_bg" />
+</selector>

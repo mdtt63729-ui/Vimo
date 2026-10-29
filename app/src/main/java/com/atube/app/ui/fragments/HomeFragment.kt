@@ -1,0 +1,227 @@
+package com.atube.app.ui.fragments
+
+import android.os.Bundle
+import android.view.View
+import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.atube.app.R
+import com.atube.app.recommendation.models.HomeFeedState
+import com.atube.app.recommendation.models.HomeUiStatus
+import com.atube.app.ui.adapters.HomeFeedAdapter
+import com.atube.app.ui.models.HomeViewModel
+import com.atube.app.helpers.StreamPrefetchManager
+import com.atube.app.extensions.toID
+
+/**
+ * Home fragment with single primary RecyclerView for the continuous feed.
+ *
+ * Performance optimizations:
+ * - RecyclerView itemAnimator disabled (returns false for all) to eliminate
+ *   unnecessary layout passes during DiffUtil updates
+ * - Stable IDs enabled for correct recycling
+ * - ItemViewCacheSize increased for smoother scroll-back
+ * - Scroll listener debounced to avoid spamming loadMore
+ * - prefetchTopVideos runs only on first page, not every submitList
+ */
+class HomeFragment : Fragment(R.layout.fragment_home) {
+    private var _binding: com.atube.app.databinding.FragmentHomeBinding? = null
+    private val binding get() = _binding!!
+
+    private val homeViewModel: HomeViewModel by activityViewModels()
+
+    private val homeFeedAdapter = HomeFeedAdapter(
+        onItemClick = { video ->
+            val videoId = video.url?.let { url ->
+                if (url.startsWith("http")) url.substringAfter("v=").substringBefore("&")
+                else url
+            } ?: return@HomeFeedAdapter
+            homeViewModel.recordClick(videoId)
+        },
+        onDismiss = { videoId ->
+            homeViewModel.recordDismissal(videoId)
+        }
+    )
+
+    private val categoryChipsAdapter = com.atube.app.ui.adapters.CategoryChipsAdapter(HomeViewModel.CATEGORIES) { category ->
+        homeViewModel.loadCategory(requireContext(), category)
+    }
+
+
+    /** Debounce flag for pagination — prevents multiple loadMore calls during fast scroll */
+    private var isLoadingMore = false
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        _binding = com.atube.app.databinding.FragmentHomeBinding.bind(view)
+        super.onViewCreated(view, savedInstanceState)
+
+        // Set up single primary RecyclerView with performance optimizations
+        binding.homeFeedRV.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = homeFeedAdapter
+            setHasFixedSize(true)
+
+            // Increase off-screen cache for smoother scroll-back without re-binding
+            setItemViewCacheSize(6)
+
+            // Disable default change animations — they cause jank during DiffUtil updates
+            // We keep add/remove animations for smooth pagination
+            (itemAnimator as? androidx.recyclerview.widget.DefaultItemAnimator)?.apply {
+                changeDuration = 0
+                moveDuration = 120
+                addDuration = 120
+                removeDuration = 80
+                supportsChangeAnimations = false
+            }
+
+            // Never animate the initial data load
+            val animator = itemAnimator
+            itemAnimator = null
+
+            // Allow smooth scrolling with fling optimization
+            addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    super.onScrolled(recyclerView, dx, dy)
+                    if (isLoadingMore) return
+                    val lm = recyclerView.layoutManager as? LinearLayoutManager ?: return
+                    val totalItems = lm.itemCount
+                    val lastVisible = lm.findLastVisibleItemPosition()
+                    if (totalItems > 0 && lastVisible >= totalItems - 8) {
+                        isLoadingMore = true
+                        homeViewModel.loadMoreRecommendations(requireContext())
+                    }
+                }
+            })
+            itemAnimator = animator
+        }
+
+        // Set up category chips with smooth scrolling
+        binding.categoryChips.apply {
+            layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+            adapter = categoryChipsAdapter
+            setHasFixedSize(true)
+            setItemViewCacheSize(12)
+            itemAnimator = null
+        }
+
+        // Swipe to refresh
+        binding.refresh.setOnRefreshListener {
+            homeViewModel.loadRecommendationFeed(requireContext(), forceRefresh = true)
+        }
+
+        // Observe feed state
+        homeViewModel.feedState.observe(viewLifecycleOwner) { state ->
+            showFeed(state)
+            // Reset debounce flag when state changes
+            if (state.status == HomeUiStatus.SUCCESS || state.status == HomeUiStatus.ERROR) {
+                isLoadingMore = false
+            }
+        }
+
+        // Retry button
+        binding.refreshButton.setOnClickListener {
+            homeViewModel.loadRecommendationFeed(requireContext(), forceRefresh = true)
+        }
+
+        // Load initial feed
+        homeViewModel.loadRecommendationFeed(requireContext(), forceRefresh = false)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val currentState = homeViewModel.feedState.value
+        if (currentState?.status == HomeUiStatus.INITIALIZING) {
+            homeViewModel.loadRecommendationFeed(requireContext(), forceRefresh = false)
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
+    private fun showFeed(state: HomeFeedState) {
+        categoryChipsAdapter.setSelectedCategory(state.selectedCategory)
+
+        when (state.status) {
+            HomeUiStatus.INITIALIZING -> {
+                // nothing to draw yet, so a spinner is all there is
+                binding.progress.isVisible = true
+                binding.homeFeedRV.isVisible = false
+                binding.nothingHere.isVisible = false
+                binding.refresh.isRefreshing = false
+            }
+
+            HomeUiStatus.LOADING -> {
+                // the feed's own skeleton cards are the loading indicator, so no
+                // spinner on top of them; only show it if there is nothing else
+                binding.progress.isVisible = state.items.isEmpty()
+                binding.nothingHere.isVisible = false
+                binding.refresh.isRefreshing = state.isRefreshing
+
+                if (state.items.isNotEmpty()) {
+                    binding.homeFeedRV.isVisible = true
+                    homeFeedAdapter.submitList(state.items)
+                }
+            }
+
+            HomeUiStatus.SUCCESS -> {
+                binding.progress.isVisible = false
+                binding.refresh.isRefreshing = false
+                binding.nothingHere.isVisible = false
+
+                if (state.items.isNotEmpty()) {
+                    binding.homeFeedRV.isVisible = true
+                    // Use commitCallback to prefetch only after layout settles
+                    homeFeedAdapter.submitList(state.items) {
+                        prefetchTopVideos(state.items)
+                    }
+                }
+            }
+
+            HomeUiStatus.EMPTY -> {
+                binding.progress.isVisible = false
+                binding.refresh.isRefreshing = false
+                binding.homeFeedRV.isVisible = false
+                binding.nothingHere.isVisible = true
+                binding.changeInstance.isVisible = false
+                binding.emptyText.text = getString(R.string.emptyList)
+            }
+
+            HomeUiStatus.ERROR -> {
+                binding.progress.isVisible = false
+                binding.refresh.isRefreshing = false
+                binding.homeFeedRV.isVisible = false
+                binding.nothingHere.isVisible = true
+                binding.changeInstance.isVisible = false
+                // Say what actually failed. A bare "Retry" that comes back every
+                // time leaves no way to tell a dead instance from a bug, and the
+                // exception message is the one clue the screen can show.
+                val reason = state.error?.message?.takeIf { it.isNotBlank() }
+                binding.emptyText.text = reason ?: getString(R.string.emptyList)
+            }
+
+            HomeUiStatus.OFFLINE -> {
+                binding.progress.isVisible = false
+                binding.refresh.isRefreshing = false
+                binding.homeFeedRV.isVisible = false
+                binding.nothingHere.isVisible = true
+                binding.changeInstance.isVisible = false
+                binding.emptyText.text = getString(R.string.emptyList)
+            }
+        }
+    }
+
+    private fun prefetchTopVideos(items: List<com.atube.app.recommendation.models.HomeFeedItem>) {
+        val videoIds = items
+            .filterIsInstance<com.atube.app.recommendation.models.HomeFeedItem.Video>()
+            .take(3)
+            .mapNotNull { it.data.url?.toID() }
+
+        if (videoIds.isNotEmpty()) {
+            StreamPrefetchManager.prefetchNext(videoIds)
+        }
+    }
+}

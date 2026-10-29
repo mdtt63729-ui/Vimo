@@ -1,0 +1,50 @@
+package com.atube.app.ui.models
+
+import android.content.Context
+import androidx.core.text.parseAsHtml
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.createSavedStateHandle
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import androidx.paging.liveData
+import com.atube.app.api.obj.Comment
+import com.atube.app.constants.IntentData
+import com.atube.app.helpers.ClipboardHelper
+import com.atube.app.ui.models.sources.CommentRepliesPagingSource
+
+class CommentRepliesViewModel(
+    private val savedStateHandle: SavedStateHandle,
+) : ViewModel() {
+
+    private val videoId = savedStateHandle.get<String>(IntentData.videoId)!!
+    private val comment = savedStateHandle.get<Comment>(IntentData.comment)!!
+
+    val commentRepliesLiveData = Pager(PagingConfig(20, enablePlaceholders = false)) {
+        CommentRepliesPagingSource(videoId, comment)
+    }
+        .liveData
+        .cachedIn(viewModelScope)
+
+    fun saveToClipboard(context: Context, reply: Comment) {
+        ClipboardHelper.save(
+            context,
+            text = reply.commentText.orEmpty().parseAsHtml().toString(),
+            notify = true
+        )
+    }
+
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                CommentRepliesViewModel(
+                    savedStateHandle = createSavedStateHandle()
+                )
+            }
+        }
+    }
+}

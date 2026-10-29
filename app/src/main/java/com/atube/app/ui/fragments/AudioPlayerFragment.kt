@@ -1,0 +1,548 @@
+package com.atube.app.ui.fragments
+
+import android.annotation.SuppressLint
+import android.graphics.Color
+import android.net.Uri
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.format.DateUtils
+import android.view.View
+import androidx.activity.BackEventCompat
+import androidx.activity.OnBackPressedCallback
+import androidx.constraintlayout.motion.widget.MotionLayout
+import androidx.constraintlayout.motion.widget.TransitionAdapter
+import androidx.core.math.MathUtils.clamp
+import androidx.core.os.bundleOf
+import androidx.core.view.isGone
+import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.commit
+import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.MediaController
+import com.atube.app.R
+import com.atube.app.api.JsonHelper
+import com.atube.app.api.obj.ChapterSegment
+import com.atube.app.constants.IntentData
+import com.atube.app.databinding.FragmentAudioPlayerBinding
+import com.atube.app.enums.PlayerCommand
+import com.atube.app.extensions.navigateVideo
+import com.atube.app.extensions.normalize
+import com.atube.app.extensions.seekBy
+import com.atube.app.extensions.toID
+import com.atube.app.extensions.togglePlayPauseState
+import com.atube.app.extensions.updateIfChanged
+import com.atube.app.helpers.AudioHelper
+import com.atube.app.helpers.BackgroundHelper
+import com.atube.app.helpers.ClipboardHelper
+import com.atube.app.helpers.ImageHelper
+import com.atube.app.helpers.NavigationHelper
+import com.atube.app.helpers.PlayerHelper
+import com.atube.app.helpers.ThemeHelper
+import com.atube.app.parcelable.PlayerData
+import com.atube.app.services.AbstractPlayerService
+import com.atube.app.services.OfflinePlayerService
+import com.atube.app.services.OnlinePlayerService
+import com.atube.app.ui.activities.AbstractPlayerHostActivity
+import com.atube.app.ui.extensions.getSystemInsets
+import com.atube.app.ui.extensions.setOnBackPressed
+import com.atube.app.ui.interfaces.AudioPlayerOptions
+import com.atube.app.ui.listeners.AudioPlayerThumbnailListener
+import com.atube.app.ui.models.ChaptersViewModel
+import com.atube.app.ui.models.CommonPlayerViewModel
+import com.atube.app.ui.sheets.ChaptersBottomSheet
+import com.atube.app.ui.sheets.PlaybackOptionsSheet
+import com.atube.app.ui.sheets.PlayingQueueSheet
+import com.atube.app.ui.sheets.SleepTimerSheet
+import com.atube.app.ui.sheets.VideoOptionsBottomSheet
+import com.atube.app.util.DataSaverMode
+import com.atube.app.util.PlayingQueue
+import kotlinx.coroutines.launch
+import kotlin.math.absoluteValue
+
+@UnstableApi
+class AudioPlayerFragment : Fragment(R.layout.fragment_audio_player), AudioPlayerOptions {
+    private var _binding: FragmentAudioPlayerBinding? = null
+    val binding get() = _binding!!
+
+    private lateinit var audioHelper: AudioHelper
+    private val activity get() = context as AbstractPlayerHostActivity
+    private val viewModel: CommonPlayerViewModel by activityViewModels()
+    private val chaptersModel: ChaptersViewModel by activityViewModels()
+
+    // for the transition
+    private var transitionStartId = 0
+    private var transitionEndId = 0
+
+    private var handler = Handler(Looper.getMainLooper())
+    private var isPaused = !PlayerHelper.playAutomatically
+
+    var isOffline: Boolean = false
+        private set
+    private var playerController: MediaController? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        audioHelper = AudioHelper(requireContext())
+
+        isOffline = requireArguments().getBoolean(IntentData.offlinePlayer)
+
+        BackgroundHelper.startMediaService(
+            requireContext(),
+            if (isOffline) OfflinePlayerService::class.java else OnlinePlayerService::class.java,
+        ) {
+            if (_binding == null) {
+                it.sendCustomCommand(AbstractPlayerService.stopServiceCommand, Bundle.EMPTY)
+                it.release()
+                return@startMediaService
+            }
+
+            playerController = it
+            handleServiceConnection()
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        _binding = FragmentAudioPlayerBinding.bind(view)
+        super.onViewCreated(view, savedInstanceState)
+
+        // manually apply additional padding for edge-to-edge compatibility
+        activity.getSystemInsets()?.let { systemBars ->
+            with(binding.audioPlayerMain) {
+                setPadding(
+                    paddingLeft,
+                    paddingTop + systemBars.top,
+                    paddingRight,
+                    paddingBottom + systemBars.bottom
+                )
+            }
+        }
+
+        initializeTransitionLayout()
+
+        // select the title TV in order for it to automatically scroll
+        binding.title.isSelected = true
+        binding.uploader.isSelected = true
+
+        binding.title.setOnLongClickListener {
+            ClipboardHelper.save(requireContext(), text = binding.title.text.toString())
+            true
+        }
+
+        binding.minimizePlayer.setOnClickListener {
+            activity.minimizePlayerContainerLayout()
+            binding.playerMotionLayout.transitionToEnd()
+        }
+
+        binding.autoPlay.isChecked = PlayerHelper.autoPlayEnabled
+        binding.autoPlay.setOnCheckedChangeListener { _, isChecked ->
+            PlayerHelper.autoPlayEnabled = isChecked
+        }
+
+        binding.prev.setOnClickListener {
+            playerController?.navigateVideo(PlayingQueue.getPrev() ?: return@setOnClickListener)
+        }
+
+        binding.next.setOnClickListener {
+            playerController?.navigateVideo(PlayingQueue.getNext() ?: return@setOnClickListener)
+        }
+
+        binding.rewindBTN.setOnClickListener {
+            playerController?.seekBy(-PlayerHelper.seekIncrement)
+        }
+        binding.forwardBTN.setOnClickListener {
+            playerController?.seekBy(PlayerHelper.seekIncrement)
+        }
+
+        childFragmentManager.setFragmentResultListener(
+            PlayingQueueSheet.PLAYING_QUEUE_REQUEST_KEY,
+            viewLifecycleOwner
+        ) { _, args ->
+            playerController?.navigateVideo(
+                args.getString(IntentData.videoId) ?: return@setFragmentResultListener
+            )
+        }
+        binding.openQueue.setOnClickListener {
+            PlayingQueueSheet().show(childFragmentManager)
+        }
+
+        binding.playbackOptions.setOnClickListener {
+            playerController?.let {
+                PlaybackOptionsSheet(it)
+                    .show(childFragmentManager)
+            }
+        }
+
+        binding.sleepTimer.setOnClickListener {
+            SleepTimerSheet().show(childFragmentManager)
+        }
+
+        binding.openVideo.setOnClickListener {
+            val currentId = PlayingQueue.getCurrent()?.url?.toID()
+            switchToVideoMode(currentId ?: return@setOnClickListener)
+        }
+
+        childFragmentManager.setFragmentResultListener(
+            ChaptersBottomSheet.SEEK_TO_POSITION_REQUEST_KEY,
+            viewLifecycleOwner
+        ) { _, bundle ->
+            playerController?.seekTo(bundle.getLong(IntentData.currentPosition))
+        }
+
+        chaptersModel.chaptersLiveData.observe(viewLifecycleOwner) { chapters ->
+            _binding?.openChapters?.isVisible = !chapters.isNullOrEmpty()
+        }
+
+        binding.openChapters.setOnClickListener {
+            ChaptersBottomSheet()
+                .apply {
+                    arguments = bundleOf(
+                        IntentData.duration to playerController?.duration?.div(1000)
+                    )
+                }
+                .show(childFragmentManager)
+        }
+
+        binding.miniPlayerClose.setOnClickListener {
+            killFragment(true)
+        }
+
+        val listener = AudioPlayerThumbnailListener(requireContext(), this)
+        binding.thumbnail.setOnTouchListener(listener)
+
+        binding.playPause.setOnClickListener {
+            playerController?.togglePlayPauseState()
+        }
+
+        binding.miniPlayerPause.setOnClickListener {
+            playerController?.togglePlayPauseState()
+        }
+
+        binding.showMore.setOnClickListener {
+            onLongTap()
+        }
+
+        // update the currently shown volume
+        binding.volumeProgressBar.let { bar ->
+            bar.progress = (audioHelper.deviceVolume * bar.max).toInt().coerceIn(0, bar.max)
+        }
+
+        if (!PlayerHelper.playAutomatically) updatePlayPauseButton()
+
+        updateChapterIndex()
+
+        val onBackPressedCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                binding.audioPlayerContainer.isClickable = false
+                binding.playerMotionLayout.transitionToEnd()
+                activity.minimizePlayerContainerLayout()
+                activity.requestOrientationChange()
+            }
+
+            override fun handleOnBackProgressed(backEvent: BackEventCompat) {
+                binding.playerMotionLayout.progress = backEvent.progress
+            }
+
+            override fun handleOnBackCancelled() {
+                binding.playerMotionLayout.transitionToStart()
+            }
+        }
+        setOnBackPressed(onBackPressedCallback)
+
+        viewModel.isMiniPlayerVisible.observe(viewLifecycleOwner) { isMiniPlayerVisible ->
+            // re-add the callback on top of the back pressed dispatcher listeners stack,
+            // so that it's the first one to become called while the full player is visible
+            if (!isMiniPlayerVisible) {
+                onBackPressedCallback.remove()
+                setOnBackPressed(onBackPressedCallback)
+            }
+
+            // show/hide mini player progress bar with the mini player
+            binding.miniPlayerProgress.isVisible = isMiniPlayerVisible == true
+
+            // if the player is minimized, the fragment behind the player should handle the event
+            onBackPressedCallback.isEnabled = isMiniPlayerVisible != true
+        }
+    }
+
+    fun switchToVideoMode(videoId: String) {
+        playerController?.sendCustomCommand(
+            AbstractPlayerService.runPlayerActionCommand,
+            bundleOf(PlayerCommand.TOGGLE_AUDIO_ONLY_MODE.name to false)
+        )
+
+        killFragment(false)
+
+        NavigationHelper.openVideoPlayerFragment(
+            context = requireContext(),
+            playerData = PlayerData(
+                videoId = videoId,
+                isOffline = isOffline
+            ),
+            alreadyStarted = true
+        )
+    }
+
+    private fun killFragment(stopPlayer: Boolean) {
+        viewModel.isMiniPlayerVisible.value = false
+
+        if (stopPlayer) playerController?.sendCustomCommand(
+            AbstractPlayerService.stopServiceCommand,
+            Bundle.EMPTY
+        )
+        playerController?.release()
+        playerController = null
+
+        viewModel.isFullscreen.value = false
+        binding.playerMotionLayout.transitionToEnd()
+        activity.supportFragmentManager.commit {
+            remove(this@AudioPlayerFragment)
+        }
+    }
+
+    fun playNextVideo(videoId: String) {
+        playerController?.navigateVideo(videoId)
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun initializeTransitionLayout() {
+        activity.setPlayerContainerProgress(0f)
+
+        binding.playerMotionLayout.addTransitionListener(object : TransitionAdapter() {
+            override fun onTransitionChange(
+                motionLayout: MotionLayout?,
+                startId: Int,
+                endId: Int,
+                progress: Float
+            ) {
+                activity.setPlayerContainerProgress(progress.absoluteValue)
+                transitionEndId = endId
+                transitionStartId = startId
+            }
+
+            override fun onTransitionCompleted(motionLayout: MotionLayout?, currentId: Int) {
+                if (currentId == transitionEndId) {
+                    viewModel.isMiniPlayerVisible.value = true
+                    activity.minimizePlayerContainerLayout()
+                } else if (currentId == transitionStartId) {
+                    viewModel.isMiniPlayerVisible.value = false
+                    activity.maximizePlayerContainerLayout()
+                }
+            }
+        })
+
+        if (arguments?.getBoolean(IntentData.minimizeByDefault, false) != true) {
+            binding.playerMotionLayout.progress = 1f
+            binding.playerMotionLayout.transitionToStart()
+        } else {
+            binding.playerMotionLayout.progress = 0f
+            binding.playerMotionLayout.transitionToEnd()
+        }
+    }
+
+    /**
+     * Load the information from a new stream into the UI
+     */
+    private fun updateStreamInfo(metadata: MediaMetadata) {
+        val binding = _binding ?: return
+
+        binding.title.text = metadata.title
+        binding.miniPlayerTitle.text = metadata.title
+
+        binding.uploader.text = metadata.artist
+        binding.uploader.setOnClickListener {
+            val uploaderId = metadata.composer?.toString() ?: return@setOnClickListener
+            NavigationHelper.navigateChannel(requireContext(), uploaderId)
+        }
+
+        metadata.artworkUri?.let { updateThumbnailAsync(it) }
+
+        initializeSeekBar()
+    }
+
+    private fun updateThumbnailAsync(thumbnailUri: Uri) {
+        if (DataSaverMode.isEnabled(requireContext()) && !isOffline) {
+            binding.progress.isVisible = false
+            binding.thumbnail.setImageResource(R.drawable.ic_launcher_monochrome)
+            val primaryColor = ThemeHelper.getThemeColor(
+                requireContext(),
+                androidx.appcompat.R.attr.colorPrimary
+            )
+            binding.thumbnail.setColorFilter(primaryColor)
+            return
+        }
+
+        binding.progress.isVisible = true
+        binding.thumbnail.isGone = true
+        // reset color filter if data saver mode got toggled or conditions for it changed
+        binding.thumbnail.setColorFilter(Color.TRANSPARENT)
+
+        lifecycleScope.launch {
+            val binding = _binding ?: return@launch
+            val bitmap = ImageHelper.getImage(requireContext(), thumbnailUri)
+            binding.thumbnail.setImageBitmap(bitmap)
+            binding.miniPlayerThumbnail.setImageBitmap(bitmap)
+            binding.thumbnail.isVisible = true
+            binding.progress.isGone = true
+        }
+    }
+
+    private fun initializeSeekBar() {
+        binding.timeBar.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) playerController?.seekTo(value.toLong() * 1000)
+        }
+        updateSeekBar()
+    }
+
+    /**
+     * Update the position, duration and text views belonging to the seek bar
+     */
+    private fun updateSeekBar() {
+        val binding = _binding ?: return
+        val duration = playerController?.duration?.takeIf { it > 0 } ?: let {
+            // if there's no duration available, clear everything
+            binding.timeBar.value = 0f
+            binding.duration.text = ""
+            binding.currentPosition.text = ""
+            handler.postDelayed(this::updateSeekBar, 100)
+            return
+        }
+        val currentPosition = playerController?.currentPosition?.toFloat() ?: 0f
+
+        // set the text for the indicators
+        binding.duration.text = DateUtils.formatElapsedTime(duration / 1000)
+        binding.currentPosition.text = DateUtils.formatElapsedTime(
+            (currentPosition / 1000).toLong()
+        )
+
+        // update the time bar current value and maximum value
+        binding.timeBar.valueTo = (duration / 1000).toFloat()
+        binding.timeBar.value = clamp(
+            currentPosition / 1000,
+            binding.timeBar.valueFrom,
+            binding.timeBar.valueTo
+        )
+
+        // update mini player progress bar (0-100%)
+        val progressPercent = ((currentPosition / duration) * 100).toInt().coerceIn(0, 100)
+        binding.miniPlayerProgress.progress = progressPercent
+
+        handler.postDelayed(this::updateSeekBar, 200)
+    }
+
+    private fun updatePlayPauseButton() {
+        playerController?.let {
+            val binding = _binding ?: return
+
+            val iconRes = PlayerHelper.getPlayPauseActionIcon(it)
+            binding.playPause.setIconResource(iconRes)
+            binding.miniPlayerPause.setImageResource(iconRes)
+        }
+    }
+
+    private fun handleServiceConnection() {
+        playerController?.addListener(object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                super.onIsPlayingChanged(isPlaying)
+
+                updatePlayPauseButton()
+                isPaused = !isPlaying
+            }
+
+            override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+                super.onMediaMetadataChanged(mediaMetadata)
+
+                updateStreamInfo(mediaMetadata)
+                // JSON-encode as work-around for https://github.com/androidx/media/issues/564
+                val chapters: List<ChapterSegment>? =
+                    mediaMetadata.extras?.getString(IntentData.chapters)?.let {
+                        JsonHelper.json.decodeFromString(it)
+                    }
+                chaptersModel.chaptersLiveData.value = chapters
+            }
+        })
+        playerController?.mediaMetadata?.let { updateStreamInfo(it) }
+        // JSON-encode as work-around for https://github.com/androidx/media/issues/564
+        chaptersModel.chaptersLiveData.value =
+            playerController?.mediaMetadata?.extras?.getString(IntentData.chapters)?.let {
+                JsonHelper.json.decodeFromString(it)
+            }
+
+        updatePlayPauseButton()
+        initializeSeekBar()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
+    override fun onSingleTap() {
+        playerController?.togglePlayPauseState()
+    }
+
+    override fun onLongTap() {
+        val current = PlayingQueue.getCurrent() ?: return
+        VideoOptionsBottomSheet()
+            .apply {
+                arguments = bundleOf(IntentData.streamItem to current)
+            }
+            .show(childFragmentManager)
+    }
+
+    override fun onSwipe(distanceY: Float) {
+        if (!PlayerHelper.swipeGestureEnabled) return
+
+        binding.volumeControls.isVisible = true
+        updateVolume(distanceY)
+    }
+
+    override fun onSwipeEnd() {
+        if (!PlayerHelper.swipeGestureEnabled) return
+
+        binding.volumeControls.isGone = true
+    }
+
+    private fun updateVolume(distance: Float) {
+        val bar = binding.volumeProgressBar
+        binding.volumeControls.apply {
+            if (isGone) {
+                isVisible = true
+                // Volume could be changed using other mediums, sync progress
+                // bar with new value.
+                bar.progress = (audioHelper.deviceVolume * bar.max).toInt().coerceIn(0, bar.max)
+            }
+        }
+
+        if (bar.progress == 0) {
+            binding.volumeImageView.setImageResource(
+                when {
+                    distance > 0 -> R.drawable.ic_volume_up
+                    else -> R.drawable.ic_volume_off
+                }
+            )
+        }
+        bar.incrementProgressBy(distance.toInt() / 3)
+        audioHelper.deviceVolume = bar.progress.toFloat() / bar.max
+
+        binding.volumeTextView.text = "${bar.progress.normalize(0, bar.max, 0, 100)}"
+    }
+
+    private fun updateChapterIndex() {
+        if (_binding == null) return
+        handler.postDelayed(this::updateChapterIndex, 100)
+
+        val currentIndex =
+            PlayerHelper.getCurrentChapterIndex(
+                playerController?.currentPosition ?: return,
+                chaptersModel.chapters
+            )
+        chaptersModel.currentChapterIndex.updateIfChanged(currentIndex ?: return)
+    }
+}

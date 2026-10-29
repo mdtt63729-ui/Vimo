@@ -1,0 +1,6 @@
+* Ultra-high-resolution thumbnails (maxresdefault 1280×720) — better than YouTube
+* No image downsampling — full-resolution thumbnails in feed, search, playlists
+* About screen redesigned with developer photo and animated wave border
+* Removed "Check for updates" from settings
+* Complete A Tube branding migration — all legacy branding removed
+* App name corrected to "A Tube" (no debug/release suffix)

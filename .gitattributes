@@ -1,0 +1,3 @@
+app/src/main/assets/* linguist-vendored
+# Ensure gradlew is executable
+gradlew text eol=lf
