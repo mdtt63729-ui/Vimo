@@ -123,23 +123,37 @@ object ImageHelper {
      * - Fallback chain: if maxresdefault 404s, retries with sddefault →
      *   hqdefault → mqdefault → default
      */
-    fun loadImageHighQuality(url: String?, target: ImageView, whiteBackground: Boolean = false) {
-        if (url.isNullOrEmpty()) return
+    fun loadImageHighQuality(
+        url: String?,
+        target: ImageView,
+        whiteBackground: Boolean = false,
+        onResult: ((Boolean) -> Unit)? = null,
+    ) {
+        if (url.isNullOrEmpty()) {
+            onResult?.invoke(false)
+            return
+        }
 
         target.setImageBitmap(null)
 
         val candidateUrls = buildFallbackChain(url)
-        if (candidateUrls.isEmpty()) return
+        if (candidateUrls.isEmpty()) {
+            onResult?.invoke(false)
+            return
+        }
 
         // Data saver: only fetch if a candidate is already cached.
         if (DataSaverMode.isEnabled(target.context)) {
             val cached = candidateUrls.firstOrNull { isCached(it) }
-            if (cached == null) return
-            loadSingle(cached, target, whiteBackground, highQuality = true)
+            if (cached == null) {
+                onResult?.invoke(false)
+                return
+            }
+            loadSingle(cached, target, whiteBackground, highQuality = true, onResult = onResult)
             return
         }
 
-        loadWithFallback(candidateUrls, target, whiteBackground, index = 0)
+        loadWithFallback(candidateUrls, target, whiteBackground, index = 0, onResult = onResult)
     }
 
     private fun buildFallbackChain(url: String): List<String> {
@@ -167,14 +181,19 @@ object ImageHelper {
         target: ImageView,
         whiteBackground: Boolean,
         index: Int,
+        onResult: ((Boolean) -> Unit)? = null,
     ) {
-        if (index >= urls.size) return
+        if (index >= urls.size) {
+            onResult?.invoke(false)
+            return
+        }
         loadSingle(
             urls[index],
             target,
             whiteBackground,
             highQuality = true,
-            onError = { loadWithFallback(urls, target, whiteBackground, index + 1) }
+            onError = { loadWithFallback(urls, target, whiteBackground, index + 1, onResult) },
+            onResult = onResult
         )
     }
 
@@ -184,9 +203,12 @@ object ImageHelper {
         whiteBackground: Boolean,
         highQuality: Boolean,
         onError: (() -> Unit)? = null,
+        onResult: ((Boolean) -> Unit)? = null,
     ) {
         target.load(url) {
-            crossfade(true)
+            // A slightly longer fade than Coil's default, so a thumbnail slides in
+            // over the skeleton instead of popping.
+            crossfade(250)
             if (highQuality) {
                 // Load at original resolution — prevents Coil from
                 // downsampling to the ImageView's on-screen size
@@ -195,6 +217,7 @@ object ImageHelper {
             listener(
                 onSuccess = { _, _ ->
                     if (whiteBackground) target.setBackgroundColor(Color.WHITE)
+                    onResult?.invoke(true)
                 },
                 onError = { _, _ -> onError?.invoke() }
             )

@@ -37,8 +37,8 @@ android {
         applicationId = "com.atube.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 76
-        versionName = "33.3"
+        versionCode = 77
+        versionName = "33.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resValue("string", "app_name", "A Tube")
 

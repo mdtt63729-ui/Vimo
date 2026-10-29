@@ -128,6 +128,8 @@ class HomeFeedAdapter(
         when (holder) {
             is VideoViewHolder -> {
                 holder.binding.thumbnail.setImageDrawable(null)
+                // do not leave a shimmer animating on a recycled row
+                ShimmerHelper.stopShimmer(holder.binding.thumbnail)
             }
             is SkeletonViewHolder -> {
                 // stop the shimmer, otherwise the animation keeps running off screen
@@ -161,8 +163,13 @@ class HomeFeedAdapter(
 
             video.duration?.let { thumbnailDuration.setFormattedDuration(it, video.isShort, video.uploaded) }
 
-            // Load thumbnail — async, cached, cancelable
-            ImageHelper.loadImageHighQuality(video.thumbnail, thumbnail)
+            // Thumbnail: the skeleton keeps shimmering until the image is really
+            // there, then Coil crossfades it in over the placeholder and the
+            // shimmer is dropped. A thumbnail that never arrives keeps its skeleton.
+            ShimmerHelper.applyShimmer(thumbnail, cornerRadiusDp = 12f)
+            ImageHelper.loadImageHighQuality(video.thumbnail, thumbnail) { loaded ->
+                if (loaded) ShimmerHelper.stopShimmer(thumbnail)
+            }
 
             // Load channel avatar if available
             if (!video.uploaderAvatar.isNullOrEmpty()) {

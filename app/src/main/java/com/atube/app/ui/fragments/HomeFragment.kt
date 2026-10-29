@@ -147,11 +147,16 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
         when (state.status) {
             HomeUiStatus.INITIALIZING -> {
-                // nothing to draw yet, so a spinner is all there is
-                binding.progress.isVisible = true
-                binding.homeFeedRV.isVisible = false
+                // A spinner is only for the case where there is genuinely nothing to
+                // draw. If the feed already holds skeleton cards (or real videos), keep
+                // them on screen: swapping them for a spinner is the flash this used to
+                // show between the skeleton and the content.
+                val hasContent = state.items.isNotEmpty()
+                binding.progress.isVisible = hasContent.not()
+                binding.homeFeedRV.isVisible = hasContent
                 binding.nothingHere.isVisible = false
                 binding.refresh.isRefreshing = false
+                if (hasContent) homeFeedAdapter.submitList(state.items)
             }
 
             HomeUiStatus.LOADING -> {

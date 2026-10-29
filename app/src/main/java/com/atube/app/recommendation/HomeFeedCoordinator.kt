@@ -12,6 +12,7 @@ import com.atube.app.recommendation.models.CandidateSource
 import com.atube.app.recommendation.models.FeedSession
 import com.atube.app.recommendation.models.HomeFeedItem
 import com.atube.app.recommendation.models.HomeFeedState
+import com.atube.app.recommendation.models.HomeUiStatus
 import com.atube.app.recommendation.models.RecommendationCandidate
 import com.atube.app.recommendation.models.RecommendationContext
 import com.atube.app.recommendation.models.RecommendationWeights
@@ -124,7 +125,10 @@ class HomeFeedCoordinator {
 
         HomeFeedState(
             items = feedItems,
-
+            // Always carry a real status: the default is INITIALIZING, and a caller
+            // that posts the state as-is would drop the UI back to the spinner and
+            // hide the feed for a moment.
+            status = if (feedItems.isEmpty()) HomeUiStatus.EMPTY else HomeUiStatus.SUCCESS,
             isLoadingMore = false,
             hasMore = candidatePage.hasMore,
             selectedCategory = session.category,
@@ -160,7 +164,7 @@ class HomeFeedCoordinator {
                 cachedFeed = allCaughtUp
                 return@withContext HomeFeedState(
                     items = allCaughtUp,
-
+                    status = HomeUiStatus.SUCCESS,
                     isLoadingMore = false,
                     hasMore = false,
                     selectedCategory = session.category,
@@ -197,7 +201,7 @@ class HomeFeedCoordinator {
 
             HomeFeedState(
                 items = updatedFeed,
-
+                status = HomeUiStatus.SUCCESS,
                 isLoadingMore = false,
                 hasMore = candidatePage.hasMore,
                 selectedCategory = session.category,
@@ -259,7 +263,7 @@ class HomeFeedCoordinator {
 
         HomeFeedState(
             items = feedItems,
-
+            status = if (feedItems.isEmpty()) HomeUiStatus.EMPTY else HomeUiStatus.SUCCESS,
             hasMore = candidatePage.hasMore,
             selectedCategory = category,
             sessionId = session.id

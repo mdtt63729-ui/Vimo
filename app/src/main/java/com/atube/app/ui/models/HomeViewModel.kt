@@ -164,7 +164,17 @@ class HomeViewModel : ViewModel() {
             try {
                 val state = homeFeedCoordinator.loadMore(region)
                 if (state != null) {
-                    feedState.postValue(state)
+                    // keep the feed on screen while a new page is appended
+                    feedState.postValue(
+                        state.copy(
+                            status = if (state.items.isEmpty()) {
+                                currentState?.status ?: HomeUiStatus.SUCCESS
+                            } else {
+                                HomeUiStatus.SUCCESS
+                            },
+                            isLoadingMore = false
+                        )
+                    )
                 } else {
                     feedState.postValue(currentState?.copy(isLoadingMore = false, hasMore = false))
                 }
