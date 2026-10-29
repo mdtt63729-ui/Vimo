@@ -1,0 +1,110 @@
+name: Generate APK signing keys
+
+# Generates the four values the release workflow signs with:
+#   ANDROID_RELEASE_SIGNING_KEY        (base64 of the keystore)
+#   ANDROID_RELEASE_KEY_ALIAS
+#   ANDROID_RELEASE_KEYSTORE_PASSWORD
+#   ANDROID_RELEASE_KEY_PASSWORD
+#
+# They are printed into the run summary and uploaded as an artifact. GitHub's own
+# GITHUB_TOKEN is not allowed to write repository secrets, so to have this workflow
+# store them automatically, add a repository secret named SECRETS_ADMIN_TOKEN that
+# holds a personal access token with "Secrets: read and write" on this repository.
+# Without it, copy the four values into Settings -> Secrets and variables -> Actions
+# by hand (they are shown once, in this run).
+on:
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/setup-java@v5
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Generate keystore
+        run: |
+          set -e
+          ALIAS="vimo"
+          PASS="$(openssl rand -hex 16)"
+          keytool -genkeypair -v -keystore vimo-release.jks -alias "$ALIAS" \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -storepass "$PASS" -keypass "$PASS" \
+            -dname "CN=Vimo, O=Vimo, C=IN"
+          base64 -w0 vimo-release.jks > keystore.b64
+          printf '%s' "$ALIAS" > alias.txt
+          printf '%s' "$PASS" > password.txt
+
+          {
+            echo "## Generated signing key"
+            echo ""
+            echo "Keystore: \`vimo-release.jks\` (also in the artifact of this run)"
+            echo ""
+            echo "| secret name | value |"
+            echo "| --- | --- |"
+            echo "| \`ANDROID_RELEASE_KEY_ALIAS\` | \`$ALIAS\` |"
+            echo "| \`ANDROID_RELEASE_KEYSTORE_PASSWORD\` | \`$PASS\` |"
+            echo "| \`ANDROID_RELEASE_KEY_PASSWORD\` | \`$PASS\` |"
+            echo "| \`ANDROID_RELEASE_SIGNING_KEY\` | see \`keystore.b64\` in the artifact |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Store the four secrets (optional)
+        if: ${{ secrets.SECRETS_ADMIN_TOKEN != '' }}
+        env:
+          GH_TOKEN_FOR_SECRETS: ${{ secrets.SECRETS_ADMIN_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          pip install --quiet pynacl
+          python - <<'PY'
+          import base64, json, os, urllib.request
+          from nacl import encoding, public
+
+          repo = os.environ["REPO"]
+          token = os.environ["GH_TOKEN_FOR_SECRETS"]
+          api = f"https://api.github.com/repos/{repo}/actions/secrets"
+
+          def call(url, data=None):
+              req = urllib.request.Request(url, data=json.dumps(data).encode() if data else None,
+                                           method="PUT" if data else "GET",
+                                           headers={"Authorization": f"Bearer {token}",
+                                                    "Accept": "application/vnd.github+json",
+                                                    "Content-Type": "application/json"})
+              with urllib.request.urlopen(req) as r:
+                  return json.loads(r.read() or b"{}")
+
+          key = call(f"{api}/public-key")
+          box = public.SealedBox(public.PublicKey(base64.b64decode(key["key"]), encoding.RawEncoder))
+
+          def sealed(v):
+              return base64.b64encode(box.encrypt(v.encode())).decode()
+
+          values = {
+              "ANDROID_RELEASE_SIGNING_KEY": open("keystore.b64").read().strip(),
+              "ANDROID_RELEASE_KEY_ALIAS": open("alias.txt").read().strip(),
+              "ANDROID_RELEASE_KEYSTORE_PASSWORD": open("password.txt").read().strip(),
+              "ANDROID_RELEASE_KEY_PASSWORD": open("password.txt").read().strip(),
+          }
+          for name, value in values.items():
+              call(f"{api}/{name}", {"encrypted_value": sealed(value), "key_id": key["key_id"]})
+              print("stored", name)
+          PY
+
+      - name: Upload keystore
+        uses: actions/upload-artifact@v6
+        with:
+          name: vimo-signing-key
+          path: |
+            vimo-release.jks
+            keystore.b64
+            alias.txt
+            password.txt
+          if-no-files-found: error
