@@ -379,7 +379,10 @@ class FloatingNavBarView @JvmOverloads constructor(
             label.includeFontPadding = false
             label.isSingleLine = true
             label.ellipsize = TextUtils.TruncateAt.END
-            label.gravity = Gravity.CENTER_VERTICAL
+            // Keep the label vertically centered in the same 44dp pill as the icon.
+            // Explicit gravity avoids baseline/top drift across Android font metrics.
+            label.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            label.setPadding(0, 0, 0, 0)
             label.isClickable = false
 
             addView(icon)
@@ -434,7 +437,7 @@ class FloatingNavBarView @JvmOverloads constructor(
             val labelAvailable = (width - iconSlotPx - labelGapPx).coerceAtLeast(0f).roundToInt()
             label.measure(
                 MeasureSpec.makeMeasureSpec(labelAvailable, MeasureSpec.AT_MOST),
-                MeasureSpec.makeMeasureSpec(height, MeasureSpec.AT_MOST)
+                MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
             )
         }
 
@@ -446,11 +449,14 @@ class FloatingNavBarView @JvmOverloads constructor(
             icon.layout(iconLeft, iconTop, iconLeft + iconSide, iconTop + iconSide)
 
             val labelLeft = (iconSlotPx + labelGapPx).roundToInt()
-            val labelWidth = min(label.measuredWidth, (r - l) - labelLeft)
+            val availableLabelWidth = ((r - l) - labelLeft).coerceAtLeast(0)
+            val labelWidth = min(label.measuredWidth, availableLabelWidth)
+            // Match the icon's vertical center exactly; do not position the label
+            // using its font's baseline or intrinsic measured height.
             label.layout(
                 labelLeft,
                 0,
-                labelLeft + labelWidth.coerceAtLeast(0),
+                labelLeft + labelWidth,
                 height
             )
         }

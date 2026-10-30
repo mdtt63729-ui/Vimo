@@ -22,9 +22,46 @@
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
+            android:layout_height="64dp"
+            android:background="?attr/colorSurface"
+            android:elevation="0dp"
+            app:contentInsetStart="16dp"
+            app:contentInsetEnd="8dp"
             app:menu="@menu/action_bar"
-            app:title="@string/app_name" />
+            app:title=""
+            app:titleTextColor="?attr/colorOnSurface">
+
+            <LinearLayout
+                android:id="@+id/toolbarBrand"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="start|center_vertical"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:importantForAccessibility="yes"
+                android:contentDescription="Vimo">
+
+                <ImageView
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:src="@drawable/ic_vimo_brand_mark"
+                    android:contentDescription="@null"
+                    android:scaleType="fitCenter" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:fontFamily="sans-serif-black"
+                    android:text="Vimo"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="25sp"
+                    android:textStyle="bold|italic"
+                    android:letterSpacing="-0.035"
+                    android:includeFontPadding="false" />
+            </LinearLayout>
+
+        </com.google.android.material.appbar.MaterialToolbar>
 
     </com.google.android.material.appbar.AppBarLayout>
 

@@ -56,8 +56,6 @@ class ShortsFragment : Fragment(R.layout.fragment_shorts) {
             onDownloadClick = { videoId -> startDownload(videoId) },
             onCommentClick = { videoId -> openComments(videoId) },
             onChannelClick = { uploaderUrl -> openChannel(uploaderUrl) },
-            onLikeClick = { item, isLiked -> },
-            onSubscribeClick = { uploaderUrl, isSubscribed -> },
             onSkipToNext = {
                 val nextPos = binding.shortsViewPager.currentItem + 1
                 if (nextPos < adapter.itemCount) {

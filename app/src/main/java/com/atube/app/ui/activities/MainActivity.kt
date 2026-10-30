@@ -203,7 +203,15 @@ class MainActivity : AbstractPlayerHostActivity() {
 
         // Any navigation breaks a double-tap pair, so leaving Home and coming back
         // can never count as the second tap of one.
-        navController.addOnDestinationChangedListener { _, _, _ -> lastHomeTapAt = 0L }
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            lastHomeTapAt = 0L
+            val isShortsDestination = destination.id == R.id.shortsFragment
+            // Reuse Vimo's existing app bar as the compact Shorts header. Search
+            // remains the existing toolbar action; Cast is omitted because this
+            // project has no supported Cast integration.
+            binding.toolbarBrand.isVisible = !isShortsDestination
+            binding.toolbar.title = if (isShortsDestination) getString(R.string.shorts) else ""
+        }
 
         // save start tab fragment id and apply navbar style
         startFragmentId = try {
@@ -246,7 +254,8 @@ class MainActivity : AbstractPlayerHostActivity() {
 
         if (binding.bottomNav.menu.children.none { it.itemId == startFragmentId }) deselectBottomBarItems()
 
-        binding.toolbar.title = ThemeHelper.getStyledAppName(this)
+        // The toolbar uses a custom Material 3 Vimo wordmark and transparent vector mark.
+        binding.toolbar.title = ""
 
         // handle error logs
         PreferenceHelper.getErrorLog().ifBlank { null }?.let {
@@ -357,7 +366,7 @@ class MainActivity : AbstractPlayerHostActivity() {
      * the look without touching the navigation graph.
      */
     private fun setUpNavBarMode() {
-        val useFloatingBar = PreferenceHelper.getBoolean(PreferenceKeys.FLOATING_NAV_BAR, false)
+        val useFloatingBar = PreferenceHelper.getBoolean(PreferenceKeys.FLOATING_NAV_BAR, true)
         val items = binding.bottomNav.menu.children
             .filter { it.isVisible }
             .map { FloatingNavItem(it.itemId, it.title?.toString().orEmpty(), it.icon) }

@@ -22,6 +22,7 @@ import com.atube.app.databinding.ItemShortBinding
 import com.atube.app.extensions.toID
 import com.atube.app.helpers.DynamicThemeManager
 import com.atube.app.helpers.PreferenceHelper
+import com.atube.app.ui.extensions.setupSubscriptionButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -50,13 +51,12 @@ class ShortsPagerAdapter(
     private val onDownloadClick: (String) -> Unit,
     private val onCommentClick: (String) -> Unit,
     private val onChannelClick: (String?) -> Unit,
-    private val onLikeClick: (StreamItem, Boolean) -> Unit = { _, _ -> },
-    private val onSubscribeClick: (String?, Boolean) -> Unit = { _, _ -> },
     private val onSkipToNext: () -> Unit = {},
 ) : ListAdapter<StreamItem, ShortsPagerAdapter.ShortsViewHolder>(DIFF_CALLBACK) {
 
     private val playerManager = ShortsPlayerManager()
-    private var currentPosition = -1
+    private var currentPosition = 0
+    private var shouldResumeAfterLifecyclePause = false
     private var isMuted = PreferenceHelper.getBoolean(
         PreferenceKeys.SHORTS_MUTED, false
     )
@@ -90,10 +90,15 @@ class ShortsPagerAdapter(
      * Plays the video at this position and pauses all others.
      */
     fun onPageSelected(position: Int) {
+        if (position == RecyclerView.NO_POSITION || position !in 0 until itemCount) return
+        if (currentPosition != position) playerManager.pause(currentPosition)
         currentPosition = position
-        playerManager.playAt(position)
+        // Only the selected page is allowed to create/attach a player. ViewPager2
+        // binds adjacent pages for prefetch, so starting playback from onBind would
+        // otherwise allow an off-screen page to replace the active player.
+        notifyItemChanged(position)
 
-        // Preload next 2 Shorts' stream URLs for instant swipe-to-play
+        // Preload the next two Shorts' stream URLs without creating players.
         preloadNext(position + 1)
         preloadNext(position + 2)
     }
@@ -133,11 +138,15 @@ class ShortsPagerAdapter(
     }
 
     fun pauseCurrentPlayer() {
+        shouldResumeAfterLifecyclePause = playerManager.isPlaying()
         playerManager.pause(currentPosition)
     }
 
     fun resumeCurrentPlayer() {
-        playerManager.playAt(currentPosition)
+        if (shouldResumeAfterLifecyclePause) {
+            playerManager.resume(currentPosition)
+            shouldResumeAfterLifecyclePause = false
+        }
     }
 
     inner class ShortsViewHolder(
@@ -146,12 +155,17 @@ class ShortsPagerAdapter(
 
         private var scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
         private var isPlaying = false
-        private var isLiked = false
-        private var isSubscribed = false
 
         fun bind(item: StreamItem, position: Int) {
             binding.shortTitle.text = item.title ?: ""
             binding.shortChannelName.text = item.uploaderName ?: ""
+            binding.shortDescription.text = item.shortDescription.orEmpty()
+            binding.shortDescription.visibility =
+                if (item.shortDescription.isNullOrBlank()) View.GONE else View.VISIBLE
+            binding.shortDescription.setOnClickListener {
+                val expanded = binding.shortDescription.maxLines > 2
+                binding.shortDescription.maxLines = if (expanded) 2 else Int.MAX_VALUE
+            }
 
             // Apply dynamic video theme from thumbnail
             if (DynamicThemeManager.isEnabled() && item.thumbnail != null) {
@@ -169,15 +183,15 @@ class ShortsPagerAdapter(
                 binding.shortChannelAvatar.load(avatarUrl) { crossfade(true) }
             }
 
-            // Like count
-            item.views?.let { views ->
-                binding.shortLikeCount.text = formatCount(views)
-            }
+            // The provider exposes view counts, not like/comment counts. Keep
+            // these action labels empty rather than presenting unrelated values.
+            binding.shortLikeCount.text = ""
             binding.shortCommentCount.text = ""
 
-            // Load video streams and prepare player
+            // Adjacent pages are bound by ViewPager2 for prefetch. Resolve and
+            // prepare a player only for the currently selected page.
             val videoId = item.url ?: return
-            loadAndPlay(videoId, position)
+            if (position == currentPosition) loadAndPlay(videoId, position)
 
             // === Play/Pause overlay ===
             setupButtonPressAnimation(binding.shortPlayPauseBtn)
@@ -193,19 +207,7 @@ class ShortsPagerAdapter(
                         togglePlayPause()
                         return true
                     }
-                    override fun onDoubleTap(e: MotionEvent): Boolean {
-                        // Double tap to like
-                        if (!isLiked) {
-                            isLiked = true
-                            binding.shortLikeBtn.setImageResource(
-                                com.atube.app.R.drawable.ic_like_filled
-                            )
-                            onLikeClick(item, true)
-                        }
-                        // Show heart animation
-                        showDoubleTapLikeAnimation(e.x, e.y)
-                        return true
-                    }
+                    override fun onDoubleTap(e: MotionEvent): Boolean = true
                 }
             )
             binding.shortPlayerView.setOnTouchListener { _, event ->
@@ -226,12 +228,13 @@ class ShortsPagerAdapter(
             // === Action buttons with smooth press-scale animation ===
             setupButtonPressAnimation(binding.shortLikeBtn)
             binding.shortLikeBtn.setOnClickListener {
-                isLiked = !isLiked
-                binding.shortLikeBtn.setImageResource(
-                    if (isLiked) com.atube.app.R.drawable.ic_like_filled
-                    else com.atube.app.R.drawable.ic_like
-                )
-                onLikeClick(item, isLiked)
+                // Current read-only video providers expose no like-write endpoint.
+                // Do not display a successful state for an action that was not saved.
+                android.widget.Toast.makeText(
+                    binding.root.context,
+                    com.atube.app.R.string.shorts_like_unavailable,
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
             }
 
             setupButtonPressAnimation(binding.shortShareBtn)
@@ -248,16 +251,14 @@ class ShortsPagerAdapter(
                 onChannelClick(item.uploaderUrl)
             }
 
-            // Subscribe button
-            setupButtonPressAnimation(binding.shortSubscribeBtn)
-            binding.shortSubscribeBtn.setOnClickListener {
-                isSubscribed = !isSubscribed
-                binding.shortSubscribeBtn.text = if (isSubscribed)
-                    binding.root.context.getString(com.atube.app.R.string.unsubscribe)
-                else
-                    binding.root.context.getString(com.atube.app.R.string.subscribe)
-                onSubscribeClick(item.uploaderUrl, isSubscribed)
-            }
+            // Persist channel subscriptions through Vimo's existing local
+            // SubscriptionHelper instead of changing the label only in memory.
+            binding.shortSubscribeBtn.setupSubscriptionButton(
+                channelId = item.uploaderUrl?.toID(),
+                channelName = item.uploaderName.orEmpty(),
+                channelAvatar = item.uploaderAvatar,
+                channelVerified = item.uploaderVerified == true
+            )
         }
 
         private fun togglePlayPause() {
@@ -274,10 +275,6 @@ class ShortsPagerAdapter(
             }
         }
 
-        /**
-         * Show a brief heart icon animation at the tapped position for double-tap-to-like.
-         * Uses ViewPropertyAnimator for scale + alpha animation.
-         */
         /**
          * Apply a smooth press-scale animation to a button:
          * On press: scale down to 0.85 quickly
@@ -318,46 +315,6 @@ class ShortsPagerAdapter(
                 }
                 false // Allow click listener to fire
             }
-        }
-
-        private fun showDoubleTapLikeAnimation(x: Float, y: Float) {
-            val context = binding.root.context
-            val imageView = android.widget.ImageView(context).apply {
-                setImageResource(com.atube.app.R.drawable.ic_like_filled)
-                // Pink/red heart color
-                setColorFilter(android.graphics.Color.parseColor("#FF4081"))
-                alpha = 0f
-                scaleX = 0.5f
-                scaleY = 0.5f
-            }
-            // Add to the player view at tapped position
-            binding.shortPlayerView.addView(imageView)
-            val size = (48 * context.resources.displayMetrics.density).toInt()
-            val params = imageView.layoutParams
-            params.width = size
-            params.height = size
-            imageView.layoutParams = params
-            imageView.x = x - size / 2f
-            imageView.y = y - size / 2f
-
-            // Animate: scale up + fade in, then fade out
-            imageView.animate()
-                .alpha(1f)
-                .scaleX(1.2f)
-                .scaleY(1.2f)
-                .setDuration(150)
-                .withEndAction {
-                    imageView.animate()
-                        .alpha(0f)
-                        .scaleX(0.8f)
-                        .scaleY(0.8f)
-                        .setDuration(300)
-                        .withEndAction {
-                            binding.shortPlayerView.removeView(imageView)
-                        }
-                        .start()
-                }
-                .start()
         }
 
         private fun toggleMute() {
@@ -454,7 +411,8 @@ class ShortsPagerAdapter(
                                     .start()
                                 // Auto-skip to next on error
                                 onSkipToNext()
-                            }
+                            },
+                            onEnded = { onSkipToNext() }
                         )
                         isPlaying = true
                         binding.shortPlayPauseBtn.setImageResource(com.atube.app.R.drawable.ic_pause)
@@ -508,7 +466,8 @@ class ShortsPagerAdapter(
                                     }
                                     .start()
                                 onSkipToNext()
-                            }
+                            },
+                            onEnded = { onSkipToNext() }
                         )
                         isPlaying = true
                         binding.shortPlayPauseBtn.setImageResource(com.atube.app.R.drawable.ic_pause)
@@ -562,7 +521,8 @@ class ShortsPagerAdapter(
                                     }
                                     .start()
                                 onSkipToNext()
-                            }
+                            },
+                            onEnded = { onSkipToNext() }
                         )
                         isPlaying = true
                         binding.shortPlayPauseBtn.setImageResource(com.atube.app.R.drawable.ic_pause)
@@ -619,7 +579,8 @@ class ShortsPagerAdapter(
                                     }
                                     .start()
                                 onSkipToNext()
-                            }
+                            },
+                            onEnded = { onSkipToNext() }
                         )
                         isPlaying = true
                         binding.shortPlayPauseBtn.setImageResource(com.atube.app.R.drawable.ic_pause)
@@ -654,13 +615,6 @@ class ShortsPagerAdapter(
             isPlaying = false
         }
 
-        private fun formatCount(count: Long): String {
-            return when {
-                count >= 1_000_000 -> String.format("%.1fM", count / 1_000_000.0)
-                count >= 1_000 -> String.format("%.1fK", count / 1_000.0)
-                else -> count.toString()
-            }
-        }
     }
 
     companion object {
@@ -683,8 +637,16 @@ class ShortsPagerAdapter(
  */
 class ShortsPlayerManager {
     private var currentPlayer: ExoPlayer? = null
+    private var currentPlayerView: androidx.media3.ui.PlayerView? = null
     private var currentPosition = -1
     private var previousVolume = 1f
+
+    private fun releaseCurrentPlayer() {
+        currentPlayerView?.player = null
+        currentPlayer?.release()
+        currentPlayer = null
+        currentPlayerView = null
+    }
 
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun setupPlayer(
@@ -693,17 +655,14 @@ class ShortsPlayerManager {
         streamUrl: String,
         playerView: androidx.media3.ui.PlayerView,
         onBuffering: (Boolean) -> Unit,
-        onError: () -> Unit
+        onError: () -> Unit,
+        onEnded: () -> Unit = {}
     ) {
-        // Release previous player if position changed
-        if (position != currentPosition) {
-            currentPlayer?.release()
-            currentPlayer = null
-            currentPosition = position
-        }
+        // Detach and release the previous page before creating the active player.
+        releaseCurrentPlayer()
+        currentPosition = position
 
         // Create new player with custom User-Agent to avoid 403 Forbidden errors
-        currentPlayer?.release()
         val httpDataSourceFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
             .setUserAgent(DEFAULT_USER_AGENT)
             .setAllowCrossProtocolRedirects(true)
@@ -714,16 +673,18 @@ class ShortsPlayerManager {
             )
             .build()
         playerView.player = currentPlayer
+        currentPlayerView = playerView
 
         val mediaItem = MediaItem.fromUri(streamUrl)
         currentPlayer?.setMediaItem(mediaItem)
-        currentPlayer?.repeatMode = Player.REPEAT_MODE_ONE
+        currentPlayer?.repeatMode = Player.REPEAT_MODE_OFF
         currentPlayer?.prepare()
         currentPlayer?.playWhenReady = true
 
         currentPlayer?.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 onBuffering(state == Player.STATE_BUFFERING)
+                if (state == Player.STATE_ENDED) onEnded()
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -744,15 +705,11 @@ class ShortsPlayerManager {
         audioUrl: String,
         playerView: androidx.media3.ui.PlayerView,
         onBuffering: (Boolean) -> Unit,
-        onError: () -> Unit
+        onError: () -> Unit,
+        onEnded: () -> Unit = {}
     ) {
-        if (position != currentPosition) {
-            currentPlayer?.release()
-            currentPlayer = null
-            currentPosition = position
-        }
-
-        currentPlayer?.release()
+        releaseCurrentPlayer()
+        currentPosition = position
         val httpDataSourceFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
             .setUserAgent(DEFAULT_USER_AGENT)
             .setAllowCrossProtocolRedirects(true)
@@ -763,6 +720,7 @@ class ShortsPlayerManager {
             )
             .build()
         playerView.player = currentPlayer
+        currentPlayerView = playerView
 
         val mediaSourceFactory = androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(dataSourceFactory)
 
@@ -771,13 +729,14 @@ class ShortsPlayerManager {
         val mergedSource = androidx.media3.exoplayer.source.MergingMediaSource(videoSource, audioSource)
 
         currentPlayer?.setMediaSource(mergedSource)
-        currentPlayer?.repeatMode = Player.REPEAT_MODE_ONE
+        currentPlayer?.repeatMode = Player.REPEAT_MODE_OFF
         currentPlayer?.prepare()
         currentPlayer?.playWhenReady = true
 
         currentPlayer?.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 onBuffering(state == Player.STATE_BUFFERING)
+                if (state == Player.STATE_ENDED) onEnded()
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -798,6 +757,8 @@ class ShortsPlayerManager {
         }
     }
 
+    fun isPlaying(): Boolean = currentPlayer?.isPlaying == true
+
     fun resume(position: Int) {
         if (position == currentPosition) {
             currentPlayer?.playWhenReady = true
@@ -814,8 +775,7 @@ class ShortsPlayerManager {
     }
 
     fun release() {
-        currentPlayer?.release()
-        currentPlayer = null
+        releaseCurrentPlayer()
         currentPosition = -1
     }
 

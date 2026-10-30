@@ -192,13 +192,26 @@
 
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/shortDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:visibility="gone" />
+
     </LinearLayout>
 
     <!-- Progress bar for buffering -->
-    <ProgressBar
+    <com.google.android.material.progressindicator.CircularProgressIndicator
         android:id="@+id/shortBuffering"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        app:indicatorSize="36dp"
+        app:trackThickness="3dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

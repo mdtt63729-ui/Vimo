@@ -52,7 +52,7 @@
 
         <SwitchPreferenceCompat
             android:icon="@drawable/ic_home"
-            app:defaultValue="false"
+            app:defaultValue="true"
             app:key="floating_nav_bar"
             app:summary="@string/floating_nav_bar_summary"
             app:title="@string/floating_nav_bar" />

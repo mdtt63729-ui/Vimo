@@ -7,6 +7,7 @@
     <string name="subscriptions">Subscriptions</string>
     <string name="library">Library</string>
     <string name="shorts">Shorts</string>
+    <string name="shorts_like_unavailable">Liking is not supported by the current video source.</string>
     <string name="shorts_video_quality">Shorts video quality</string>
     <string name="yes">Yes</string>
     <string name="search_hint">Search</string>
@@ -132,6 +133,7 @@
     <string name="update_available">Update available</string>
     <string name="appearance">Appearance</string>
     <string name="downloads">Downloads</string>
+    <string name="downloader">Downloader</string>
     <string name="update_summary">Check for update</string>
     <string name="app_uptodate">Running the latest version.</string>
     <string name="playback_speed">Playback speed</string>

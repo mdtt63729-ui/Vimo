@@ -29,25 +29,23 @@ class ShortsCandidateCoordinator {
 
     /** Base shorts queries — always available, India-first. */
     private val baseQueries = listOf(
-        "shorts", "viral shorts", "funny shorts", "trending shorts",
-        "comedy shorts", "dance shorts", "motivational shorts",
-        "facts shorts", "cooking shorts", "life hack shorts",
-        // India-first queries
-        "indian shorts", "bollywood shorts", "cricket shorts",
-        "hindi shorts", "tamil shorts", "telugu shorts",
-        "desi shorts", "india viral shorts"
+        // Broad queries are retained only when candidate metadata can be classified
+        // and strictly filtered before entering the feed.
+        "indian comedy shorts", "indian music shorts", "indian dance shorts",
+        "indian technology shorts", "indian ai shorts", "indian food shorts",
+        "indian education shorts", "indian travel shorts", "indian culture shorts",
+        "hindi comedy shorts", "bengali comedy shorts", "tamil music shorts",
+        "telugu dance shorts", "bollywood music shorts", "regional cooking shorts",
+        "science facts shorts", "indian travel shorts", "devotional shorts"
     )
 
     /** Interest-based queries — adapted to user's top interests. */
     private val interestQueries = listOf(
-        "gaming shorts", "music shorts", "tech shorts", "ai shorts",
-        "android shorts", "creative shorts", "design shorts",
-        "editing shorts", "animation shorts", "art shorts",
-        "cricket shorts", "bollywood shorts", "food shorts",
-        "fitness shorts", "diy shorts",
-        // India-interest queries
-        "indian music shorts", "indian comedy shorts", "indian food shorts",
-        "indian dance shorts", "bollywood dance shorts"
+        "music shorts", "technology shorts", "ai shorts", "android tips shorts",
+        "indian comedy shorts", "indian music shorts", "indian food shorts",
+        "indian dance shorts", "bollywood dance shorts", "education facts shorts",
+        "indian travel shorts", "indian culture shorts", "devotional shorts",
+        "regional language comedy shorts", "cooking tutorial shorts"
     )
 
     // State
@@ -106,8 +104,10 @@ class ShortsCandidateCoordinator {
                 }
 
                 val shorts = searchResult.items
-                    .filter { it.isShort == true || (it.duration != null && it.duration <= 60) }
+                    .filter { it.isShort }
                     .filter { it.url != null }
+                    // PRD: strict hard exclusions happen before candidate selection.
+                    .filter { item -> InitialShortsCategoryFilter.isAllowed(item.title, item.uploaderName, item.shortDescription) }
                     .map { it.toStreamItem() }
                     .filter { stream ->
                         val id = stream.url?.toID() ?: return@filter false
@@ -151,9 +151,8 @@ class ShortsCandidateCoordinator {
         try {
             // Try multiple trending categories concurrently
             val results = supervisorScope {
+                // Only use allowed PRD categories. Do not query Gaming or Sports.
                 val categories = listOf(
-                    com.atube.app.api.TrendingCategory.LIVE,
-                    com.atube.app.api.TrendingCategory.GAMING,
                     com.atube.app.api.TrendingCategory.MUSIC
                 )
 
@@ -162,6 +161,7 @@ class ShortsCandidateCoordinator {
                         try {
                             MediaServiceRepository.instance.getTrending(region, category)
                                 .filter { it.isShort }
+                                .filter { stream -> InitialShortsCategoryFilter.isAllowed(stream.title, stream.uploaderName, stream.shortDescription) }
                                 .filter { stream ->
                                     val id = stream.url?.toID() ?: return@filter false
                                     id !in seenIds
@@ -197,10 +197,11 @@ class ShortsCandidateCoordinator {
         val searchBatch = fetchNextBatch(profile)
         val trendingBatch = fetchTrendingShorts(region)
 
-        // Merge, deduplicate, and shuffle slightly for variety
+        // Merge and deduplicate. Keep deterministic source order so the ranking
+        // layer can apply freshness, popularity, affinity and diversity explicitly.
         val merged = (searchBatch + trendingBatch)
             .distinctBy { it.url?.toID() }
-            .shuffled()
+            .let { ShortsRankingEngine.rank(it, profile) }
             .take(20)
 
         merged
