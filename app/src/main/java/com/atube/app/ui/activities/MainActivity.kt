@@ -145,6 +145,8 @@ class MainActivity : AbstractPlayerHostActivity() {
         // give the on-device yt-dlp engine its application context; it starts the
         // Python interpreter lazily, only when it is actually needed
         YtDlpEngine.init(this)
+        // second playback fallback: InnerTube streams via the on-device QuickJS resolver
+        com.atube.app.api.muso.MusoStreamResolver.init(this)
 
         // manually apply additional padding for edge-to-edge compatibility
         // see https://developer.android.com/develop/ui/views/layout/edge-to-edge

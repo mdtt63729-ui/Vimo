@@ -40,8 +40,8 @@ android {
         applicationId = "aos.vimo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 83
-        versionName = "33.10"
+        versionCode = 84
+        versionName = "33.11"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resValue("string", "app_name", "Vimo")
 
@@ -162,6 +162,8 @@ dependencies {
     implementation(libs.material)
     // springs for the floating navigation bar (same curves the Off app uses)
     implementation("androidx.dynamicanimation:dynamicanimation:1.1.0")
+    // QuickJS runtime used by the InnerTube stream resolver (second playback fallback)
+    implementation("io.github.dokar3:quickjs-kt:1.0.14")
     implementation(libs.androidx.palette)
 
     /* ExoPlayer */

@@ -7,6 +7,7 @@ import com.atube.app.api.obj.ContentItem
 import com.atube.app.api.obj.SearchResult
 import com.atube.app.api.obj.StreamItem
 import com.atube.app.api.obj.Streams
+import com.atube.app.api.muso.MusoStreamResolver
 
 /**
  * Wraps the chosen [MediaServiceRepository] and gives it one extra chance.
@@ -24,6 +25,14 @@ class YtDlpFallbackRepository(
     override suspend fun getStreams(videoId: String): Streams {
         val primary = runCatching { base.getStreams(videoId) }.getOrNull()
         if (primary != null && primary.hasPlayableStreams()) return primary
+
+        // Second fallback: the on-device InnerTube resolver. If the primary extractor
+        // could not produce a stream, playback is served from here instead.
+        val viaMuso = runCatching { MusoStreamResolver.resolve(videoId) }.getOrNull()
+        if (viaMuso != null && viaMuso.hasPlayableStreams()) {
+            Log.i(TAG, "resolved $videoId with the InnerTube fallback")
+            return viaMuso
+        }
 
         val viaYtDlp = runCatching { YtDlpStreamResolver.resolve(videoId) }.getOrNull()
         if (viaYtDlp != null && viaYtDlp.hasPlayableStreams()) {
