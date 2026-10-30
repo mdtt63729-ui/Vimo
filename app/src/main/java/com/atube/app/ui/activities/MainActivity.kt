@@ -66,7 +66,6 @@ import com.atube.app.ui.models.SearchViewModel
 import com.atube.app.ui.models.SubscriptionsViewModel
 import com.atube.app.ui.preferences.BackupRestoreSettings
 import com.atube.app.ui.preferences.BackupRestoreSettings.Companion.FILETYPE_ANY
-import com.atube.app.ui.views.FloatingNavItem
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -91,6 +90,14 @@ class MainActivity : AbstractPlayerHostActivity() {
 
     /** Last time Home was tapped, for the double-tap refresh gesture. */
     private var lastHomeTapAt = 0L
+
+    /** Destination ids in the order the floating bar shows them. */
+    private val floatingDestinations = listOf(
+        R.id.homeFragment,
+        R.id.shortsFragment,
+        R.id.downloadsFragment,
+        R.id.libraryFragment
+    )
 
     /** Last time the low-network card was shown, so it cannot repeat in a burst. */
     private var lastLowNetworkWarningAt = 0L
@@ -374,29 +381,31 @@ class MainActivity : AbstractPlayerHostActivity() {
      */
     private fun setUpNavBarMode() {
         val useFloatingBar = PreferenceHelper.getBoolean(PreferenceKeys.FLOATING_NAV_BAR, true)
-        val items = binding.bottomNav.menu.children
-            .filter { it.isVisible }
-            .map { FloatingNavItem(it.itemId, it.title?.toString().orEmpty(), it.icon) }
-            .toList()
 
-        if (!useFloatingBar || items.isEmpty()) {
+        if (!useFloatingBar) {
             binding.floatingNav.visibility = View.GONE
             binding.bottomNav.visibility = View.VISIBLE
             return
         }
 
-        binding.floatingNav.setItems(items, startFragmentId)
-        binding.floatingNav.onItemSelected = { itemId -> onFloatingNavItemSelected(itemId) }
+        // The bar owns its four destinations in a fixed order: Home, Shorts,
+        // Downloader, Library. A tap reports the index, so map it to the nav id.
+        binding.floatingNav.onItemSelected = { index ->
+            floatingDestinations.getOrNull(index)?.let { onFloatingNavItemSelected(it) }
+        }
+        binding.floatingNav.setSelectedIndex(indexOfDestination(startFragmentId), animate = false)
         binding.floatingNav.visibility = View.VISIBLE
         binding.bottomNav.visibility = View.GONE
 
         // keep the pill in step with navigation coming from anywhere else
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            if (items.any { it.itemId == destination.id }) {
-                binding.floatingNav.setSelectedItem(destination.id)
-            }
+            val index = floatingDestinations.indexOf(destination.id)
+            if (index >= 0) binding.floatingNav.setSelectedIndex(index)
         }
     }
+
+    private fun indexOfDestination(id: Int): Int =
+        floatingDestinations.indexOf(id).takeIf { it >= 0 } ?: 0
 
     /**
      * A tap on the floating bar follows exactly the same path as a tap on the
@@ -414,7 +423,6 @@ class MainActivity : AbstractPlayerHostActivity() {
                 .childFragmentManager.fragments.firstOrNull()
             tryScrollToTop(fragment?.requireView())
         }
-        binding.floatingNav.setSelectedItem(itemId)
     }
 
     /**
@@ -524,8 +532,6 @@ class MainActivity : AbstractPlayerHostActivity() {
                     com.google.android.material.R.attr.colorOnPrimary
                 )
             }
-            // the floating bar draws its own badge
-            binding.floatingNav.setBadgeCount(R.id.subscriptionsFragment, lastSeenVideoIndex)
         }
     }
 
@@ -859,7 +865,6 @@ class MainActivity : AbstractPlayerHostActivity() {
 
         if (item.itemId == R.id.subscriptionsFragment) {
             binding.bottomNav.removeBadge(R.id.subscriptionsFragment)
-            binding.floatingNav.clearBadge(R.id.subscriptionsFragment)
         }
 
         // Remove focus from search view when navigating to bottom view.

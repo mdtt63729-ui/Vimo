@@ -94,7 +94,7 @@
 
     <!-- Floating pill navigation bar. It is declared after the fragment container
          so it draws over the content, the way a floating bar should. -->
-    <com.atube.app.ui.views.FloatingNavBarView
+    <com.atube.app.ui.views.Material3FloatingNavBarView
         android:id="@+id/floatingNav"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
