@@ -1152,19 +1152,21 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
 
         if (show) {
             binding.descriptionLayout.isGone = false
-            binding.optionsScroll.isGone = false
+            binding.optionsScroll?.isGone = false
             binding.relatedRecView.isGone = false
             binding.playerChannel.isGone = false
             binding.commentsToggle.isGone = false
             playerBackgroundBinding.videoTransitionProgress.isVisible = false
             fadeOutSkeleton()
         } else {
-            binding.detailsSkeleton.isVisible = true
-            binding.detailsSkeleton.alpha = 1f
-            binding.detailsSkeleton.startShimmer()
+            binding.detailsSkeleton?.apply {
+                isVisible = true
+                alpha = 1f
+                startShimmer()
+            }
 
             binding.descriptionLayout.isGone = true
-            binding.optionsScroll.isGone = true
+            binding.optionsScroll?.isGone = true
             binding.relatedRecView.isGone = true
             binding.playerChannel.isGone = true
             binding.commentsToggle.isGone = true
@@ -1200,7 +1202,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
         val density = resources.displayMetrics.density
         val blocks = listOf(
             binding.descriptionLayout,
-            binding.optionsScroll,
+            binding.optionsScroll!!,
             binding.playerChannel,
             binding.commentsToggle
         )
@@ -1224,7 +1226,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
     }
 
     private fun fadeOutSkeleton() {
-        val skeleton = binding.detailsSkeleton
+        val skeleton = binding.detailsSkeleton ?: return
         if (!skeleton.isVisible) return
 
         skeleton.animate().cancel()
