@@ -1,5 +1,7 @@
 package com.atube.app.ui.views
 
+import com.atube.app.R
+
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -201,7 +203,8 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
             x += w
         }
         updateAnimatedChildren()
-        updateIndicator()
+        // the pill is drawn in onDraw from the same progress value, nothing to update here
+        invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
