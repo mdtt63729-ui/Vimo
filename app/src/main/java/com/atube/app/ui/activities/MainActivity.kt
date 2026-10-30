@@ -85,7 +85,8 @@ class MainActivity : AbstractPlayerHostActivity() {
         const val NAV_DEBOUNCE_MS = 200L
         const val LOW_NETWORK_WARNING_INTERVAL_MS = 120_000L
         const val LOW_NETWORK_POPUP_VISIBLE_MS = 6_000L
-        const val HOME_DOUBLE_TAP_MS = 400L
+        // Fast, deliberate double tap only. Anything slower is just a second tap.
+        const val HOME_DOUBLE_TAP_MS = 280L
     }
 
     /** Last time Home was tapped, for the double-tap refresh gesture. */
@@ -199,6 +200,10 @@ class MainActivity : AbstractPlayerHostActivity() {
         val navHostFragment = binding.fragment.getFragment<NavHostFragment>()
         navController = navHostFragment.navController
         binding.bottomNav.setupWithNavController(navController)
+
+        // Any navigation breaks a double-tap pair, so leaving Home and coming back
+        // can never count as the second tap of one.
+        navController.addOnDestinationChangedListener { _, _, _ -> lastHomeTapAt = 0L }
 
         // save start tab fragment id and apply navbar style
         startFragmentId = try {
@@ -404,7 +409,7 @@ class MainActivity : AbstractPlayerHostActivity() {
      */
     private fun registerHomeDoubleTap(): Boolean {
         val now = System.currentTimeMillis()
-        val isDoubleTap = now - lastHomeTapAt <= HOME_DOUBLE_TAP_MS
+        val isDoubleTap = lastHomeTapAt != 0L && now - lastHomeTapAt <= HOME_DOUBLE_TAP_MS
         lastHomeTapAt = if (isDoubleTap) 0L else now
         return isDoubleTap
     }

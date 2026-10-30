@@ -128,14 +128,17 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             homeViewModel.loadRecommendationFeed(requireContext(), forceRefresh = true)
         }
 
-        // Load initial feed
-        homeViewModel.loadRecommendationFeed(requireContext(), forceRefresh = false)
+        // Only fetch when there is nothing to show yet: returning to this tab must
+        // not reload the feed and swap the videos out.
+        if (homeFeedAdapter.itemCount == 0) {
+            homeViewModel.loadRecommendationFeed(requireContext(), forceRefresh = false)
+        }
     }
 
     override fun onResume() {
         super.onResume()
         val currentState = homeViewModel.feedState.value
-        if (currentState?.status == HomeUiStatus.INITIALIZING) {
+        if (currentState?.status == HomeUiStatus.INITIALIZING && homeFeedAdapter.itemCount == 0) {
             homeViewModel.loadRecommendationFeed(requireContext(), forceRefresh = false)
         }
     }

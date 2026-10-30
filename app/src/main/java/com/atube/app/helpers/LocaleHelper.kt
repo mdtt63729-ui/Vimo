@@ -33,11 +33,18 @@ object LocaleHelper {
         }
     }
 
+    /**
+     * The country the app is being used in.
+     *
+     * The network comes first, then the SIM, then the device locale: the network is
+     * the country the phone is actually in, while a SIM can be from somewhere else
+     * (roaming, a travel eSIM). Locale is the last resort for Wi-Fi-only devices.
+     */
     fun getDetectedCountry(context: Context): String {
-        return detectSIMCountry(context)
-            ?: detectNetworkCountry(context)
+        return detectNetworkCountry(context)
+            ?: detectSIMCountry(context)
             ?: detectLocaleCountry(context)
-            ?: "UK"
+            ?: "US"
     }
 
     private fun detectSIMCountry(context: Context): String? {
