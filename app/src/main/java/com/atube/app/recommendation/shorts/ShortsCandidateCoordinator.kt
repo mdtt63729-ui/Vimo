@@ -104,7 +104,8 @@ class ShortsCandidateCoordinator {
                 }
 
                 val shorts = searchResult.items
-                    .filter { it.isShort }
+                    // ContentItem.isShort is nullable, and filter needs a real Boolean
+                    .filter { it.isShort == true }
                     .filter { it.url != null }
                     // PRD: strict hard exclusions happen before candidate selection.
                     .filter { item -> InitialShortsCategoryFilter.isAllowed(item.title, item.uploaderName, item.shortDescription) }
