@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Outline short-form video icon, per the navigation bar spec: a rounded capsule with
+  a play glyph inside, drawn as strokes only. Same 24dp grid and stroke weight as the
+  other navigation icons, so it sits on the same optical line.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+
+    <path
+        android:pathData="M9,4.75h6A4.25,4.25 0 0 1 19.25,9v6A4.25,4.25 0 0 1 15,19.25H9A4.25,4.25 0 0 1 4.75,15V9A4.25,4.25 0 0 1 9,4.75Z"
+        android:fillColor="#00000000"
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="1.6"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+
+    <path
+        android:pathData="M10.6,9.1L14.8,12L10.6,14.9Z"
+        android:fillColor="#00000000"
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="1.6"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+</vector>

@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  The four destinations of the navigation bar: Home, Shorts, Downloader, Library.
+  Both bars (the standard one and the floating one) read this menu, so they always
+  offer the same tabs in the same order.
+-->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
@@ -7,25 +12,18 @@
         android:title="@string/startpage" />
 
     <item
-        android:id="@+id/trendsFragment"
-        android:icon="@drawable/ic_trending"
-        android:title="@string/trends"
-        android:visible="false" />
+        android:id="@+id/shortsFragment"
+        android:icon="@drawable/ic_shorts_outline"
+        android:title="@string/shorts" />
 
     <item
-        android:id="@+id/subscriptionsFragment"
-        android:icon="@drawable/ic_subscriptions"
-        android:title="@string/subscriptions" />
+        android:id="@+id/downloadsFragment"
+        android:icon="@drawable/ic_download_filled"
+        android:title="@string/downloads" />
 
     <item
         android:id="@+id/libraryFragment"
         android:icon="@drawable/ic_library"
         android:title="@string/library" />
-
-    <item
-        android:id="@+id/downloadsFragment"
-        android:icon="@drawable/ic_download_filled"
-        android:title="@string/downloads"
-        android:visible="false" />
 
 </menu>

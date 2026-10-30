@@ -50,6 +50,16 @@ class FloatingNavBarView @JvmOverloads constructor(
     /** Called with the menu item id of the tapped slot. */
     var onItemSelected: ((Int) -> Unit)? = null
 
+    /**
+     * Animation and behaviour knobs. The defaults are the locked values from the
+     * navigation bar spec, so an app that changes nothing gets the reference motion.
+     */
+    var config: FloatingNavConfig = FloatingNavConfig()
+        set(value) {
+            field = value
+            requestLayout()
+        }
+
     private val items = mutableListOf<FloatingNavItem>()
     private val slots = mutableListOf<SlotView>()
     private val badgeCounts = mutableMapOf<Int, Int>()
@@ -70,18 +80,18 @@ class FloatingNavBarView @JvmOverloads constructor(
     private val pillHeightPx = dp(44f)
     private val barPaddingPx = dp(8f)
     private val iconSizePx = dp(22f)
-    private val labelSlidePx = dp(30f)
+    private val labelSlidePx = dp(LABEL_SLIDE_DP)
 
     private val colorSurfaceContainerHigh = themeColor(
         com.google.android.material.R.attr.colorSurfaceContainerHigh,
         0xFF2A2A2E.toInt()
     )
-    private val colorPrimaryContainer = themeColor(
-        com.google.android.material.R.attr.colorPrimaryContainer,
+    private val colorSecondaryContainer = themeColor(
+        com.google.android.material.R.attr.colorSecondaryContainer,
         0xFF4A4458.toInt()
     )
-    private val colorOnPrimaryContainer = themeColor(
-        com.google.android.material.R.attr.colorOnPrimaryContainer,
+    private val colorOnSecondaryContainer = themeColor(
+        com.google.android.material.R.attr.colorOnSecondaryContainer,
         0xFFE8DEF8.toInt()
     )
     private val colorOnSurfaceVariant = themeColor(
@@ -122,7 +132,7 @@ class FloatingNavBarView @JvmOverloads constructor(
 
         pillDrawable.shape = GradientDrawable.RECTANGLE
         pillDrawable.cornerRadius = pillHeightPx / 2f
-        pillDrawable.setColor(colorPrimaryContainer)
+        pillDrawable.setColor(colorSecondaryContainer)
         pill.background = pillDrawable
         addView(pill)
     }
@@ -190,8 +200,8 @@ class FloatingNavBarView @JvmOverloads constructor(
             // Same spring as Off: enough bounce to feel alive, not so much that the
             // label overshoots its slot.
             spring = SpringForce(target)
-                .setDampingRatio(SPRING_DAMPING)
-                .setStiffness(SPRING_STIFFNESS)
+                .setDampingRatio(config.dampingRatio)
+                .setStiffness(config.stiffness)
             addUpdateListener { _, value, _ ->
                 progress = value
                 applySlotStyles()
@@ -214,9 +224,13 @@ class FloatingNavBarView @JvmOverloads constructor(
             val contentColor = argbEvaluator.evaluate(
                 open,
                 colorOnSurfaceVariant,
-                colorOnPrimaryContainer
+                colorOnSecondaryContainer
             ) as Int
             slot.applyContentColor(contentColor)
+            // Icon and label run on the same value as the pill, never on their own clock.
+            slot.icon.scaleX = 1f + ICON_SCALE_MAX * open
+            slot.icon.scaleY = 1f + ICON_SCALE_MAX * open
+            slot.icon.rotation = ICON_ROTATION_MAX * open
             slot.label.alpha = ((open - 0.3f) / 0.7f).coerceIn(0f, 1f)
             slot.label.translationX = (1f - open) * labelSlidePx
         }
@@ -285,6 +299,10 @@ class FloatingNavBarView @JvmOverloads constructor(
     private fun computeSlotWidths(available: Float): List<Float> {
         if (items.isEmpty()) return emptyList()
         val expand = expansions()
+        if (!config.dynamicWidth) {
+            // Fixed slots: every item keeps the same width and only the pill moves.
+            return items.indices.map { available / items.size }
+        }
         // Icon slot plus the label's natural width, opened up only while selected.
         val weights = items.indices.map { i ->
             ICON_SLOT_DP + (slots.getOrNull(i)?.labelWidthDp()?.let { it + LABEL_GAP_DP } ?: 0f) * expand[i]
@@ -442,13 +460,33 @@ class FloatingNavBarView @JvmOverloads constructor(
         const val ICON_SLOT_DP = 56f
         const val LABEL_GAP_DP = 8f
 
-        // Off's springs: 0.78 damping at medium-low stiffness for the selection,
+        // Locked animation values: 0.78 damping at 190 stiffness for the selection,
         // 0.40 at high stiffness for the press.
         const val SPRING_DAMPING = 0.78f
-        const val SPRING_STIFFNESS = 400f
+        const val SPRING_STIFFNESS = 190f
         const val PRESS_DAMPING = 0.40f
+
+        // Active icon grows to 1.12 and tilts -6 degrees; the label slides 12 px.
+        const val ICON_SCALE_MAX = 0.12f
+        const val ICON_ROTATION_MAX = -6f
+        const val LABEL_SLIDE_DP = 12f
     }
 }
+
+/**
+ * Configuration for [FloatingNavBarView].
+ *
+ * @param dampingRatio spring damping of the selection movement (0.78 by default).
+ * @param stiffness spring stiffness of the selection movement (190 by default).
+ * @param dynamicWidth whether the active item expands and the others compress.
+ * @param movingIndicator whether the pill travels between items.
+ */
+data class FloatingNavConfig(
+    val dampingRatio: Float = 0.78f,
+    val stiffness: Float = 190f,
+    val dynamicWidth: Boolean = true,
+    val movingIndicator: Boolean = true
+)
 
 /** One entry of the floating navigation bar. */
 data class FloatingNavItem(
