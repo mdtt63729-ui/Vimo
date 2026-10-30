@@ -21,6 +21,7 @@ import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams
+import android.view.animation.DecelerateInterpolator
 import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -441,6 +442,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
 
         initializeTransitionLayout()
         initializeOnClickActions()
+        playEnterAnimation()
 
         if (PlayerHelper.autoFullscreenEnabled && resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
             setFullscreen()
@@ -1137,12 +1139,119 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
             ?.dismiss()
     }
 
+    /**
+     * Swaps between the loading skeleton and the real details.
+     *
+     * While the stream info is in flight the details column shows the same
+     * shimmering placeholder blocks the home feed uses, and the real views are
+     * `GONE` rather than `INVISIBLE` - otherwise they would still reserve their
+     * height and leave a blank gap under the skeleton.
+     */
     private fun toggleVideoInfoVisibility(show: Boolean) {
         binding.descriptionLayout.collapseDescription()
-        binding.descriptionLayout.isInvisible = !show
-        binding.relatedRecView.isInvisible = !show
-        binding.playerChannel.isInvisible = !show
-        playerBackgroundBinding.videoTransitionProgress.isVisible = !show
+
+        if (show) {
+            binding.descriptionLayout.isGone = false
+            binding.optionsScroll.isGone = false
+            binding.relatedRecView.isGone = false
+            binding.playerChannel.isGone = false
+            binding.commentsToggle.isGone = false
+            playerBackgroundBinding.videoTransitionProgress.isVisible = false
+            fadeOutSkeleton()
+        } else {
+            binding.detailsSkeleton.isVisible = true
+            binding.detailsSkeleton.alpha = 1f
+            binding.detailsSkeleton.startShimmer()
+
+            binding.descriptionLayout.isGone = true
+            binding.optionsScroll.isGone = true
+            binding.relatedRecView.isGone = true
+            binding.playerChannel.isGone = true
+            binding.commentsToggle.isGone = true
+            playerBackgroundBinding.videoTransitionProgress.isVisible = true
+        }
+    }
+
+    /**
+     * The screen itself comes in: the details column slides up the last few
+     * pixels while it fades in, instead of snapping into place. The video
+     * surface is deliberately left alone so the SurfaceView never re-measures
+     * mid-animation.
+     */
+    private fun playEnterAnimation() {
+        val density = resources.displayMetrics.density
+        binding.playerScrollView.alpha = 0f
+        binding.playerScrollView.translationY = 24f * density
+        binding.playerScrollView
+            .animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(280L)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+    }
+
+    /**
+     * Fades the loading skeleton out and hands the column over to the real
+     * details, which fade in one block after another. The related list fades in
+     * on its own once its rows are actually submitted - see [showRelatedStreams].
+     */
+    private fun playDetailsReveal() {
+        val density = resources.displayMetrics.density
+        val blocks = listOf(
+            binding.descriptionLayout,
+            binding.optionsScroll,
+            binding.playerChannel,
+            binding.commentsToggle
+        )
+
+        blocks.forEachIndexed { index, block ->
+            block.animate().cancel()
+            block.alpha = 0f
+            block.translationY = 14f * density
+            block.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(index * 45L)
+                .setDuration(260L)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
+
+        binding.relatedRecView.animate().cancel()
+        binding.relatedRecView.alpha = 0f
+        binding.relatedRecView.translationY = 14f * density
+    }
+
+    private fun fadeOutSkeleton() {
+        val skeleton = binding.detailsSkeleton
+        if (!skeleton.isVisible) return
+
+        skeleton.animate().cancel()
+        skeleton
+            .animate()
+            .alpha(0f)
+            .setDuration(160L)
+            .setInterpolator(DecelerateInterpolator())
+            .withEndAction {
+                skeleton.isGone = true
+                skeleton.alpha = 1f
+                skeleton.stopShimmer()
+            }
+            .start()
+    }
+
+    /** Fades the related-video list in once its rows are on screen. */
+    private fun fadeInRelatedStreams() {
+        binding.relatedRecView.animate().cancel()
+        binding.relatedRecView
+            .animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setStartDelay(120L)
+            .setDuration(240L)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
     }
 
     private fun connectToPlayerView(player: Player) {
@@ -1178,6 +1287,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
         binding.descriptionLayout.setStreams(streams)
 
         toggleVideoInfoVisibility(true)
+        playDetailsReveal()
 
         binding.apply {
             ImageHelper.loadImage(streams.uploaderAvatar, binding.playerChannelImage, true)
@@ -1243,7 +1353,10 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
     }
 
     private suspend fun showRelatedStreams() {
-        if (!PlayerHelper.relatedStreamsEnabled) return
+        if (!PlayerHelper.relatedStreamsEnabled) {
+            binding.relatedRecView.isGone = true
+            return
+        }
 
         val relatedStreams = if (isOffline) {
             withContext(Dispatchers.IO) {
@@ -1259,7 +1372,8 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
         binding.relatedRecView.adapter = VideoCardsAdapter(
             columnWidthDp = if (relatedLayoutManager.orientation == LinearLayoutManager.HORIZONTAL) 250f else null
         ).also { adapter ->
-            adapter.submitList(relatedStreams)
+            // the fade-in waits for the rows, so the list never appears empty
+            adapter.submitList(relatedStreams) { fadeInRelatedStreams() }
         }
     }
 

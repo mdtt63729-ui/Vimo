@@ -205,13 +205,13 @@
 
     </LinearLayout>
 
-    <!-- Progress bar for buffering -->
-    <com.google.android.material.progressindicator.CircularProgressIndicator
+    <!-- Buffering indicator: the Material 3 content loading indicator -->
+    <com.google.android.material.loadingindicator.LoadingIndicator
         android:id="@+id/shortBuffering"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:indicatorSize="36dp"
-        app:trackThickness="3dp"
+        app:indicatorColor="@android:color/white"
+        app:containerColor="@android:color/transparent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

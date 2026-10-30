@@ -196,13 +196,12 @@ class MainActivity : AbstractPlayerHostActivity() {
                 }
             })
         }
-        // manually update the bottom bar height in the mini player transition
+        // keep the mini player transition in step with the bar that is on screen
         binding.bottomNav.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            updateBottomBarKeyFrames(binding.bottomNav)
+            updateBottomBarKeyFrames()
         }
-        // the floating bar sits in the same place, so it needs the same keyframes
         binding.floatingNav.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            updateBottomBarKeyFrames(binding.floatingNav)
+            updateBottomBarKeyFrames()
         }
 
         // Automatic update check disabled — feature hidden from settings UI
@@ -357,18 +356,45 @@ class MainActivity : AbstractPlayerHostActivity() {
     }
 
     /**
-     * Keep the mini player transition's keyframe heights in sync with the bar that
-     * is currently on screen. These frame positions are hardcoded in
+     * Keep the mini player transition's keyframes in sync with the bar that is
+     * currently on screen. These frame positions are hardcoded in
      * activity_main_scene.xml!
+     *
+     * The distance used is the one from the bar's *top edge* to the bottom of the
+     * window, not just `bar.height`. The floating pill carries a 28dp bottom
+     * margin plus the navigation-bar inset as padding, so measuring by height
+     * alone lifted the mini player by too little and left it sitting on top of
+     * the pill instead of above it.
      */
-    private fun updateBottomBarKeyFrames(bar: View) {
+    private fun updateBottomBarKeyFrames() {
+        if (!this::binding.isInitialized) return
+
+        val bar = when {
+            binding.floatingNav.isVisible -> binding.floatingNav
+            binding.bottomNav.isVisible -> binding.bottomNav
+            else -> return
+        }
+
+        val rootHeight = binding.root.height
+        if (rootHeight <= 0 || bar.height <= 0) return
+
+        // bottom margin, bottom padding/inset and the bar's own height, together.
+        // The sanity range keeps a not-yet-laid-out bar from pushing the mini
+        // player off the top of the screen.
+        val measured = rootHeight - bar.top
+        val offset = if (measured in bar.height..(rootHeight / 2)) {
+            measured.toFloat()
+        } else {
+            bar.height.toFloat()
+        }
+
         val transition = binding.root.getTransition(R.id.bottom_bar_transition)
         transition.keyFrameList.forEach { keyFrame ->
             for (key in keyFrame.getKeyFramesForView(bar.id)) {
-                if (key.framePosition == 1) key.setValue(Key.TRANSLATION_Y, bar.height)
+                if (key.framePosition == 1) key.setValue(Key.TRANSLATION_Y, offset)
             }
             for (key in keyFrame.getKeyFramesForView(binding.container.id)) {
-                if (key.framePosition == 100) key.setValue(Key.TRANSLATION_Y, -bar.height)
+                if (key.framePosition == 100) key.setValue(Key.TRANSLATION_Y, -offset)
             }
         }
         binding.root.scene.setTransition(transition)
@@ -388,6 +414,7 @@ class MainActivity : AbstractPlayerHostActivity() {
         if (!useFloatingBar) {
             binding.floatingNav.visibility = View.GONE
             binding.bottomNav.visibility = View.VISIBLE
+            updateBottomBarKeyFrames()
             return
         }
 
@@ -399,6 +426,7 @@ class MainActivity : AbstractPlayerHostActivity() {
         binding.floatingNav.setSelectedIndex(indexOfDestination(startFragmentId), animate = false)
         binding.floatingNav.visibility = View.VISIBLE
         binding.bottomNav.visibility = View.GONE
+        updateBottomBarKeyFrames()
 
         // keep the pill in step with navigation coming from anywhere else
         navController.addOnDestinationChangedListener { _, destination, _ ->

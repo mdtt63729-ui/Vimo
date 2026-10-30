@@ -6,8 +6,8 @@
         android:id="@+id/yt_transition"
         motion:constraintSetEnd="@+id/end"
         motion:constraintSetStart="@id/start"
-        motion:duration="10"
-        motion:motionInterpolator="easeInOut">
+        motion:duration="320"
+        motion:motionInterpolator="standard">
         <KeyFrameSet>
             <KeyAttribute
                 android:alpha="0"

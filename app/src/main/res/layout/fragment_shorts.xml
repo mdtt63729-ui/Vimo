@@ -11,14 +11,12 @@
         android:layout_height="match_parent"
         android:orientation="vertical" />
 
-    <com.google.android.material.progressindicator.CircularProgressIndicator
+    <com.google.android.material.loadingindicator.LoadingIndicator
         android:id="@+id/shortsLoading"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:visibility="gone"
-        app:indicatorSize="40dp"
-        app:trackThickness="4dp" />
+        android:visibility="gone" />
 
     <LinearLayout
         android:id="@+id/shortsError"

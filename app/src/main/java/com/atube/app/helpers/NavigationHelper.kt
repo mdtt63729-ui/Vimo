@@ -161,6 +161,8 @@ object NavigationHelper {
             IntentData.alreadyStarted to alreadyStarted,
         )
         activity.supportFragmentManager.commitNow {
+            // the player slides in instead of replacing the content with a cut
+            setCustomAnimations(R.anim.player_open_in, 0)
             replace<PlayerFragment>(R.id.container, args = bundle)
         }
     }

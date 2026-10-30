@@ -24,6 +24,14 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <!-- Shown while the stream info is still loading. Same shimmering
+                 blocks as the home feed, so the details column never sits empty
+                 while the request is in flight. -->
+            <com.atube.app.ui.views.PlayerDetailsSkeletonView
+                android:id="@+id/detailsSkeleton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
             <com.atube.app.ui.views.DescriptionLayout
                 android:id="@+id/descriptionLayout"
                 android:layout_width="match_parent"
@@ -31,6 +39,7 @@
                 android:animateLayoutChanges="true" />
 
             <HorizontalScrollView
+                android:id="@+id/optionsScroll"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingBottom="10dp"

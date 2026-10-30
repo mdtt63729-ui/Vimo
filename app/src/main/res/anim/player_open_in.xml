@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The player screen slides up the last few pixels as it appears, so opening a
+  video no longer looks like a hard cut. Only a translation is used: the video
+  surface is a SurfaceView, and moving it is safe where scaling or fading it
+  would make it re-measure or show through.
+-->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:interpolator/decelerate_quint">
+
+    <translate
+        android:duration="280"
+        android:fromYDelta="3%"
+        android:toYDelta="0" />
+
+</set>
