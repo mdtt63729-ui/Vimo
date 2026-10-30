@@ -480,7 +480,16 @@ object PlayerHelper {
      */
     @OptIn(androidx.media3.common.util.UnstableApi::class)
     fun createPlayer(context: Context, trackSelector: DefaultTrackSelector): ExoPlayer {
-        val dataSourceFactory = DefaultDataSource.Factory(context)
+        val upstreamFactory = DefaultDataSource.Factory(context)
+
+        // Streams handed over by the InnerTube fallback are googlevideo links that
+        // reject requests without the matching User-Agent and Referer, so any URL the
+        // resolver knows about gets its headers attached before the source opens it.
+        val dataSourceFactory =
+            androidx.media3.datasource.ResolvingDataSource.Factory(upstreamFactory) { dataSpec ->
+                val headers = com.atube.app.api.muso.MusoStreamResolver.headersFor(dataSpec.uri.toString())
+                if (headers.isEmpty()) dataSpec else dataSpec.withRequestHeaders(headers)
+            }
         val audioAttributes = AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)

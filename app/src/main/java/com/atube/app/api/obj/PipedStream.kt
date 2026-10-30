@@ -34,6 +34,12 @@ data class PipedStream(
     val lastModified: Long? = null,
     val isDrc: Boolean? = null,
     val xtags: String? = null,
+    /**
+     * Extra HTTP headers this stream's URL needs, if any. The InnerTube fallback
+     * returns googlevideo links that reject requests without a matching User-Agent
+     * and Referer, so the player has to send them.
+     */
+    val requestHeaders: Map<String, String>? = null,
 ): Parcelable {
     private fun getQualityString(videoId: String): String {
         return "${videoId}_${quality?.replace(" ", "_")}_$format." +

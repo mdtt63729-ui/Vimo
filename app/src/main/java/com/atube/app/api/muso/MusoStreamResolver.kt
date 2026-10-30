@@ -35,12 +35,30 @@ object MusoStreamResolver {
     @Volatile private var appContext: Context? = null
     @Volatile private var resolver: YoutubeiResolver? = null
 
+    /**
+     * Headers the player needs for the URLs this resolver hands out, keyed by URL.
+     * The player's data source looks a URL up here before opening it.
+     */
+    private val headersByUrl = java.util.concurrent.ConcurrentHashMap<String, Map<String, String>>()
+
+    fun headersFor(url: String): Map<String, String> = headersByUrl[url].orEmpty()
+
     /** Called once from the activity, before anything asks for a stream. */
     fun init(context: Context) {
         appContext = context.applicationContext
     }
 
     fun isAvailable(): Boolean = appContext != null
+
+    /**
+     * Boot the QuickJS runtime and warm the InnerTube session ahead of the first
+     * play, so the first fallback does not pay that cost while the user waits.
+     */
+    suspend fun preWarm() {
+        val context = appContext ?: return
+        runCatching { resolver(context).preWarm() }
+            .onFailure { Log.d(TAG, "preWarm skipped: ${it.message}") }
+    }
 
     private fun resolver(context: Context): YoutubeiResolver =
         resolver ?: synchronized(this) {
@@ -111,6 +129,10 @@ object MusoStreamResolver {
     ): Streams? {
         if (video.url.isBlank()) return null
 
+        // Remember the headers for both URLs before they reach the player.
+        headersByUrl[video.url] = video.requestHeaders
+        audio?.let { headersByUrl[it.url] = it.requestHeaders }
+
         val videoStreams = mutableListOf(video.toPipedStream(videoOnly = !video.isMuxed))
         if (audio != null && audio.url.isNotBlank()) {
             videoStreams += audio.toPipedStream(videoOnly = false, isAudio = true)
@@ -151,7 +173,8 @@ object MusoStreamResolver {
         height = height?.takeIf { it > 0 },
         fps = fps?.takeIf { it > 0 },
         contentLength = if (contentLength > 0) contentLength else -1,
-        itag = formatId.takeIf { it > 0 }
+        itag = formatId.takeIf { it > 0 },
+        requestHeaders = requestHeaders.takeIf { it.isNotEmpty() }
     )
 
     private fun extensionOf(mimeType: String): String = when {

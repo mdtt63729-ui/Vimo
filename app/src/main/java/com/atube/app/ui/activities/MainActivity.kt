@@ -147,6 +147,11 @@ class MainActivity : AbstractPlayerHostActivity() {
         YtDlpEngine.init(this)
         // second playback fallback: InnerTube streams via the on-device QuickJS resolver
         com.atube.app.api.muso.MusoStreamResolver.init(this)
+        // Boot its JavaScript runtime now, off the main thread, so the first play does
+        // not wait for the interpreter and the player script to load.
+        lifecycleScope.launch(Dispatchers.IO) {
+            com.atube.app.api.muso.MusoStreamResolver.preWarm()
+        }
 
         // manually apply additional padding for edge-to-edge compatibility
         // see https://developer.android.com/develop/ui/views/layout/edge-to-edge
