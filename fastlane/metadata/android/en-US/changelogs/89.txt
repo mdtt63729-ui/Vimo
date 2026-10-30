@@ -1,0 +1,8 @@
+Vimo 33.16
+
+- Every loading spinner is now the Material 3 content loading indicator.
+- The details under a video show a shimmering skeleton while they load, then
+  fade in block by block.
+- The video screen slides up as it opens instead of cutting in.
+- The mini player now rests on top of the navigation bar instead of covering
+  it, and the bar itself no longer jumps during the transition.

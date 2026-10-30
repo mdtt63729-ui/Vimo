@@ -2,54 +2,28 @@
 <MotionScene xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:motion="http://schemas.android.com/apk/res-auto">
 
-    <!-- Reminder: Update the logic to dynamically set the bottom bar height
-     in MainActivity.kt when updating this! -->
+    <!--
+      Only the container moves. The navigation bars deliberately have no
+      keyframes: the old scene dropped the bar 80dp at frame 1 and brought it
+      back by frame 100, which read as a jump as soon as the transition took a
+      visible amount of time. The bar now stays exactly where it is, the way it
+      does in YouTube, and the mini player rises to rest on top of it.
+
+      The frame-100 translation of @id/container is replaced at runtime with the
+      real distance from the bar's top edge to the bottom of the window - see
+      MainActivity.updateBottomBarKeyFrames.
+    -->
     <Transition
         android:id="@+id/bottom_bar_transition"
         motion:constraintSetEnd="@+id/end"
         motion:constraintSetStart="@id/start"
-        motion:duration="320"
-        motion:motionInterpolator="standard"
+        motion:duration="300"
+        motion:motionInterpolator="decelerate"
         motion:layoutDuringTransition="honorRequest">
         <KeyFrameSet>
             <KeyAttribute
                 android:translationY="0dp"
                 motion:framePosition="0"
-                motion:motionTarget="@+id/bottomNav" />
-
-            <KeyAttribute
-                android:translationY="80dp"
-                motion:framePosition="1"
-                motion:motionTarget="@+id/bottomNav" />
-
-            <KeyAttribute
-                android:translationY="0dp"
-                motion:framePosition="100"
-                motion:motionTarget="@+id/bottomNav" />
-
-            <KeyAttribute
-                android:translationY="0dp"
-                motion:framePosition="0"
-                motion:motionTarget="@+id/floatingNav" />
-
-            <KeyAttribute
-                android:translationY="80dp"
-                motion:framePosition="1"
-                motion:motionTarget="@+id/floatingNav" />
-
-            <KeyAttribute
-                android:translationY="0dp"
-                motion:framePosition="100"
-                motion:motionTarget="@+id/floatingNav" />
-
-            <KeyAttribute
-                android:scaleY="1"
-                motion:framePosition="30"
-                motion:motionTarget="@+id/container" />
-
-            <KeyAttribute
-                android:translationY="0dp"
-                motion:framePosition="35"
                 motion:motionTarget="@+id/container" />
 
             <KeyAttribute

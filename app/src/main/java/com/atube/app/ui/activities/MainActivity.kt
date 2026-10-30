@@ -369,35 +369,49 @@ class MainActivity : AbstractPlayerHostActivity() {
     private fun updateBottomBarKeyFrames() {
         if (!this::binding.isInitialized) return
 
-        val bar = when {
-            binding.floatingNav.isVisible -> binding.floatingNav
-            binding.bottomNav.isVisible -> binding.bottomNav
-            else -> return
-        }
-
-        val rootHeight = binding.root.height
-        if (rootHeight <= 0 || bar.height <= 0) return
-
-        // bottom margin, bottom padding/inset and the bar's own height, together.
-        // The sanity range keeps a not-yet-laid-out bar from pushing the mini
-        // player off the top of the screen.
-        val measured = rootHeight - bar.top
-        val offset = if (measured in bar.height..(rootHeight / 2)) {
-            measured.toFloat()
-        } else {
-            bar.height.toFloat()
-        }
+        val offset = playerContainerOffset()
+        if (offset <= 0f) return
 
         val transition = binding.root.getTransition(R.id.bottom_bar_transition)
         transition.keyFrameList.forEach { keyFrame ->
-            for (key in keyFrame.getKeyFramesForView(bar.id)) {
-                if (key.framePosition == 1) key.setValue(Key.TRANSLATION_Y, offset)
-            }
             for (key in keyFrame.getKeyFramesForView(binding.container.id)) {
                 if (key.framePosition == 100) key.setValue(Key.TRANSLATION_Y, -offset)
             }
         }
         binding.root.scene.setTransition(transition)
+    }
+
+    /**
+     * The distance from the bottom of the window to the top edge of the bar that
+     * is currently on screen.
+     *
+     * This is the bar's height *plus* the margin and the navigation-bar inset
+     * padding underneath it. Measuring by `bar.height` alone is what used to put
+     * the mini player on top of the floating pill: the pill floats 28dp above the
+     * bottom edge and pads itself by the system inset, so it was lifted roughly
+     * 40dp too little and the two overlapped.
+     */
+    private fun playerContainerOffset(): Float {
+        if (!this::binding.isInitialized) return 0f
+
+        val bar = when {
+            binding.floatingNav.isVisible -> binding.floatingNav
+            binding.bottomNav.isVisible -> binding.bottomNav
+            else -> return 0f
+        }
+        if (bar.height <= 0) return 0f
+
+        val rootHeight = binding.root.height
+        if (rootHeight <= 0) return bar.height.toFloat()
+
+        // the sanity range keeps a bar that has not been laid out yet from
+        // pushing the mini player off the top of the screen
+        val measured = rootHeight - bar.top
+        return if (measured in bar.height..(rootHeight / 2)) {
+            measured.toFloat()
+        } else {
+            bar.height.toFloat()
+        }
     }
 
     /**
@@ -993,12 +1007,20 @@ class MainActivity : AbstractPlayerHostActivity() {
             .show()
     }
 
+    /**
+     * Both player fragments report their own transition progress through
+     * [setPlayerContainerProgress] on every frame, and that is what moves the
+     * container. Starting a second MotionLayout transition from here meant the
+     * two wrote to the same progress: the container animated, then the player
+     * snapped it to its own value, which is what made the mini player stutter
+     * into place instead of gliding.
+     */
     override fun minimizePlayerContainerLayout() {
-        binding.mainMotionLayout.transitionToEnd()
+        // intentionally empty - see the comment above
     }
 
     override fun maximizePlayerContainerLayout() {
-        binding.mainMotionLayout.transitionToStart()
+        // intentionally empty - see the comment above
     }
 
     override fun setPlayerContainerProgress(progress: Float) {
