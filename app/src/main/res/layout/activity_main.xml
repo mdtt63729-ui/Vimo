@@ -41,10 +41,11 @@
                 android:importantForAccessibility="yes"
                 android:contentDescription="Vimo">
 
+                <!-- The app's own launcher icon, not a stand-in vector -->
                 <ImageView
                     android:layout_width="34dp"
                     android:layout_height="34dp"
-                    android:src="@drawable/ic_vimo_brand_mark"
+                    android:src="@mipmap/ic_launcher"
                     android:contentDescription="@null"
                     android:scaleType="fitCenter" />
 

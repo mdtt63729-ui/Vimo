@@ -284,6 +284,10 @@ class FloatingNavBarView @JvmOverloads constructor(
             x += slotWidth
         }
 
+        // Re-apply the per-slot transforms here too: a layout pass must never leave
+        // the icons at their previous scale.
+        applySlotStyles()
+
         var before = barPaddingPx
         for (i in 0 until lower) before += slotWidths[i]
         val pillX = before + slotWidths[lower] * fraction
@@ -468,13 +472,15 @@ class FloatingNavBarView @JvmOverloads constructor(
 
         // Locked animation values: 0.78 damping at 190 stiffness for the selection,
         // 0.40 at high stiffness for the press.
-        const val SPRING_DAMPING = 0.78f
+        // 0.86 settles without the small wobble 0.78 shows on a 120 Hz screen, so the
+        // pill glides between buttons instead of jiggling into place.
+        const val SPRING_DAMPING = 0.86f
         const val SPRING_STIFFNESS = 190f
         const val PRESS_DAMPING = 0.40f
 
         // Active icon grows to 1.12 and tilts -6 degrees; the label slides 12 px.
-        const val ICON_SCALE_MAX = 0.12f
-        const val ICON_ROTATION_MAX = -6f
+        const val ICON_SCALE_MAX = 0.14f
+        const val ICON_ROTATION_MAX = -8f
         const val LABEL_SLIDE_DP = 12f
     }
 }
