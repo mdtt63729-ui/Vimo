@@ -28,7 +28,6 @@
             app:contentInsetStart="16dp"
             app:contentInsetEnd="8dp"
             app:menu="@menu/action_bar"
-            app:title=""
             app:titleTextColor="?attr/colorOnSurface">
 
             <LinearLayout
@@ -41,11 +40,12 @@
                 android:importantForAccessibility="yes"
                 android:contentDescription="Vimo">
 
-                <!-- The app's own launcher icon, not a stand-in vector -->
+                <!-- The Vimo mark. Same 34dp box the launcher icon used to sit in,
+                     drawn from a density-matched PNG so it stays sharp. -->
                 <ImageView
                     android:layout_width="34dp"
                     android:layout_height="34dp"
-                    android:src="@mipmap/ic_launcher"
+                    android:src="@drawable/ic_vimo_logo"
                     android:contentDescription="@null"
                     android:scaleType="fitCenter" />
 
@@ -61,6 +61,19 @@
                     android:letterSpacing="-0.035"
                     android:includeFontPadding="false" />
             </LinearLayout>
+
+            <!-- Shorts uses the bar as its own header. It gets this label instead
+                 of the action bar title, which is what drew a second "Vimo". -->
+            <TextView
+                android:id="@+id/toolbarTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start|center_vertical"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="22sp"
+                android:visibility="gone"
+                tools:visibility="gone" />
 
         </com.google.android.material.appbar.MaterialToolbar>
 

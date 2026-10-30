@@ -208,9 +208,10 @@ class MainActivity : AbstractPlayerHostActivity() {
 
         // set the action bar for the activity
         setSupportActionBar(binding.toolbar)
-        // NavigationUI writes the destination label into the toolbar title, which
-        // showed up as a second "Vimo" to the left of the logo. The header draws its
-        // own brand row, so the action bar title is switched off entirely.
+        // The action bar title is never used. setSupportActionBar seeds it with the
+        // app label, which is what drew a second "Vimo" to the left of the logo;
+        // disabling the display hides it, and nothing below ever writes to it again
+        // (Toolbar.setTitle would re-create the title view and show it again).
         supportActionBar?.setDisplayShowTitleEnabled(false)
 
         val navHostFragment = binding.fragment.getFragment<NavHostFragment>()
@@ -226,7 +227,8 @@ class MainActivity : AbstractPlayerHostActivity() {
             // remains the existing toolbar action; Cast is omitted because this
             // project has no supported Cast integration.
             binding.toolbarBrand.isVisible = !isShortsDestination
-            binding.toolbar.title = if (isShortsDestination) getString(R.string.shorts) else ""
+            binding.toolbarTitle.isVisible = isShortsDestination
+            if (isShortsDestination) binding.toolbarTitle.text = getString(R.string.shorts)
         }
 
         // save start tab fragment id and apply navbar style
@@ -269,9 +271,6 @@ class MainActivity : AbstractPlayerHostActivity() {
         }
 
         if (binding.bottomNav.menu.children.none { it.itemId == startFragmentId }) deselectBottomBarItems()
-
-        // The toolbar uses a custom Material 3 Vimo wordmark and transparent vector mark.
-        binding.toolbar.title = ""
 
         // handle error logs
         PreferenceHelper.getErrorLog().ifBlank { null }?.let {

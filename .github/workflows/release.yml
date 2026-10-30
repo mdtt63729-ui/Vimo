@@ -1,0 +1,140 @@
+name: Release
+
+# The one release workflow: build, sign with the repository keystore, and publish
+# the signed APK to the Releases section. Nothing is signed outside this job.
+#
+# Triggers
+#   - push to main that touches app/build.gradle.kts (i.e. a version bump)
+#   - a v*.* tag push
+#   - manual run from the Actions tab
+#
+# Signing secrets (Actions -> Secrets -> Actions):
+#   KEYSTORE_BASE64     the .p12/.jks keystore, base64 encoded (single line)
+#   KEY_ALIAS           the alias inside the keystore
+#   KEYSTORE_PASSWORD   store password
+#   KEY_PASSWORD        key password
+#
+# The ANDROID_RELEASE_* names are accepted as a fallback so older setups keep
+# working. Passwords reach apksigner through the environment, never the command
+# line, so they do not appear in the log.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app/build.gradle.kts"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, sign and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: "zulu"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Set up Python for the on-device yt-dlp engine
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          architecture: "x64"
+
+      - name: Read the version
+        id: v
+        run: |
+          set -e
+          VERSION=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -n1)
+          VCODE=$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n1)
+          if [ -z "$VERSION" ] || [ -z "$VCODE" ]; then
+            echo "could not read versionName/versionCode from app/build.gradle.kts" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "code=$VCODE" >> "$GITHUB_OUTPUT"
+          echo "Vimo $VERSION (versionCode $VCODE)"
+
+      - name: Build APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Sign the APK
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 || secrets.ANDROID_RELEASE_SIGNING_KEY }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS || secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD || secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.KEY_PASSWORD || secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -e
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "no keystore secret found" >&2
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_B64" | base64 -d > release.keystore
+          echo "keystore: $(wc -c < release.keystore) bytes"
+
+          # fail early and loudly if the secret cannot be opened
+          keytool -list -keystore release.keystore -storetype PKCS12 \
+            -storepass "$KS_PASS" -alias "$KEY_ALIAS" > /dev/null
+          echo "keystore opens, alias '$KEY_ALIAS' present"
+
+          BT="$ANDROID_HOME/build-tools/35.0.0"
+          if [ ! -x "$BT/apksigner" ]; then
+            BT="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)"
+          fi
+          echo "using build-tools: $BT"
+
+          UNSIGNED=app/build/outputs/apk/release/app-release-unsigned.apk
+          APK="Vimo-${{ steps.v.outputs.version }}.apk"
+
+          "$BT/zipalign" -f -p 4 "$UNSIGNED" aligned.apk
+          "$BT/apksigner" sign \
+            --ks release.keystore --ks-type PKCS12 --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:KS_PASS --key-pass env:KEY_PASS \
+            --out "$APK" aligned.apk
+          "$BT/apksigner" verify --print-certs "$APK"
+
+          rm -f release.keystore aligned.apk
+          ls -l "$APK"
+
+      - name: Publish to Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          VERSION="${{ steps.v.outputs.version }}"
+          VCODE="${{ steps.v.outputs.code }}"
+          APK="Vimo-$VERSION.apk"
+          NOTES="fastlane/metadata/android/en-US/changelogs/$VCODE.txt"
+
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            gh release upload "v$VERSION" "$APK" --clobber
+          else
+            if [ -f "$NOTES" ]; then
+              gh release create "v$VERSION" "$APK" \
+                --title "Vimo $VERSION" --notes-file "$NOTES" --latest
+            else
+              gh release create "v$VERSION" "$APK" \
+                --title "Vimo $VERSION" --generate-notes --latest
+            fi
+          fi
+          echo "published v$VERSION"
+
+      - name: Keep the APK as a build artifact too
+        uses: actions/upload-artifact@v6
+        with:
+          name: Vimo-${{ steps.v.outputs.version }}-apk
+          path: Vimo-${{ steps.v.outputs.version }}.apk
+          if-no-files-found: error

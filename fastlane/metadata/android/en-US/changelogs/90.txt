@@ -1,0 +1,8 @@
+Vimo 33.17
+
+- The header shows one name: the duplicate "Vimo" on the left is gone, and the
+  mark beside it is the new Vimo logo.
+- The mini player now rests on top of the navigation bar, and the bar no longer
+  jumps while the player opens or closes.
+- Every loading spinner is the Material 3 content loading indicator, and the
+  details under a video shimmer in with a skeleton while they load.
