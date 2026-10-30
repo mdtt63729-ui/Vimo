@@ -94,7 +94,6 @@ class MainActivity : AbstractPlayerHostActivity() {
     /** Destination ids in the order the floating bar shows them. */
     private val floatingDestinations = listOf(
         R.id.homeFragment,
-        R.id.shortsFragment,
         R.id.downloadsFragment,
         R.id.libraryFragment
     )
@@ -210,6 +209,10 @@ class MainActivity : AbstractPlayerHostActivity() {
 
         // set the action bar for the activity
         setSupportActionBar(binding.toolbar)
+        // NavigationUI writes the destination label into the toolbar title, which
+        // showed up as a second "Vimo" to the left of the logo. The header draws its
+        // own brand row, so the action bar title is switched off entirely.
+        supportActionBar?.setDisplayShowTitleEnabled(false)
 
         val navHostFragment = binding.fragment.getFragment<NavHostFragment>()
         navController = navHostFragment.navController

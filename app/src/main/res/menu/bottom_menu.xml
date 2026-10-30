@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The four destinations of the navigation bar: Home, Shorts, Downloader, Library.
+  The three destinations of the navigation bar: Home, Downloader, Library.
   Both bars (the standard one and the floating one) read this menu, so they always
-  offer the same tabs in the same order.
+  offer the same tabs in the same order. Shorts is intentionally not listed.
 -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -11,10 +11,6 @@
         android:icon="@drawable/ic_home"
         android:title="@string/startpage" />
 
-    <item
-        android:id="@+id/shortsFragment"
-        android:icon="@drawable/ic_shorts_outline"
-        android:title="@string/shorts" />
 
     <item
         android:id="@+id/downloadsFragment"

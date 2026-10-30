@@ -37,9 +37,9 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
         val iconRes: Int
     )
 
+    // Shorts is deliberately absent: three destinations for now.
     private val destinations = listOf(
         Destination("Home", R.drawable.ic_nav_home),
-        Destination("Shorts", R.drawable.ic_nav_shorts),
         Destination("Downloader", R.drawable.ic_nav_downloader),
         Destination("Library", R.drawable.ic_nav_library)
     )
@@ -163,7 +163,7 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
             spring = SpringAnimation(this, PROGRESS_PROPERTY).apply {
                 spring = SpringForce(safeIndex.toFloat()).apply {
                     dampingRatio = 0.78f
-                    stiffness = SpringForce.STIFFNESS_LOW
+                    stiffness = STIFFNESS
                 }
                 setStartVelocity(0f)
                 start()
@@ -259,9 +259,24 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
 
     private fun setProgress(value: Float) {
         progress = value.coerceIn(0f, destinations.lastIndex.toFloat())
+        // Lay the slots out here rather than calling requestLayout(): a full layout
+        // pass every animation frame is what made the shift stutter on 120 Hz.
+        layoutSlots()
         updateAnimatedChildren()
-        requestLayout()
         invalidate()
+    }
+
+    /** Positions the slots for the current progress without a full layout pass. */
+    private fun layoutSlots() {
+        if (width == 0) return
+        val widths = calculateSlotWidths((width - 2 * outerInset).coerceAtLeast(0f))
+        var x = outerInset.toInt()
+        val top = (height - innerHeight) / 2
+        itemViews.forEachIndexed { i, child ->
+            val w = widths.getOrElse(i) { 0f }.toInt()
+            child.layout(x, top, x + w, top + innerHeight)
+            x += w
+        }
     }
 
     override fun onDetachedFromWindow() {
@@ -271,6 +286,9 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     }
 
     companion object {
+        /** The PRD's spring stiffness for the selection movement. */
+        private const val STIFFNESS = 190f
+
         private val PROGRESS_PROPERTY = object : androidx.dynamicanimation.animation.FloatPropertyCompat<Material3FloatingNavBarView>("navProgress") {
             override fun getValue(view: Material3FloatingNavBarView): Float = view.progress
             override fun setValue(view: Material3FloatingNavBarView, value: Float) = view.setProgress(value)
