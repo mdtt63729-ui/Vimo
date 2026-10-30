@@ -93,11 +93,28 @@ jobs:
 
       - name: Collect outputs
         run: |
-          ls -l app/build/outputs/apk/release
-          if [ -f A-Tube-signed.apk ]; then cp A-Tube-signed.apk A-Tube.apk; else
-            cp app/build/outputs/apk/release/*.apk A-Tube.apk
+          set -e
+          OUT=app/build/outputs/apk/release
+          ls -l "$OUT"
+
+          # The release dir holds several APKs (unsigned, aligned temp, signed),
+          # so a bare `cp *.apk` fails with "target is not a directory". Take the
+          # signed one specifically: the signing action exports its path.
+          SRC="${ANDROID_SIGNED_FILE:-}"
+          if [ -z "$SRC" ] || [ ! -f "$SRC" ]; then
+            SRC="$(ls "$OUT"/*-signed.apk 2>/dev/null | head -n 1 || true)"
           fi
-          ls -l A-Tube.apk || true
+          if [ -z "$SRC" ] || [ ! -f "$SRC" ]; then
+            SRC="$(ls "$OUT"/*.apk 2>/dev/null | head -n 1 || true)"
+          fi
+          if [ -z "$SRC" ] || [ ! -f "$SRC" ]; then
+            echo "no APK found in $OUT" >&2
+            exit 1
+          fi
+
+          echo "packaging $SRC"
+          cp "$SRC" A-Tube.apk
+          ls -l A-Tube.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v6
