@@ -1,0 +1,5 @@
+Vimo 33.28
+
+- Thumbnails fall back to the original image URL when the instance's image proxy
+  does not answer, so a dead proxy no longer means no pictures anywhere.
+- Failed image loads are logged instead of being swallowed silently.

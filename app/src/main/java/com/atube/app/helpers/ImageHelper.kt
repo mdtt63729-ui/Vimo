@@ -103,15 +103,15 @@ object ImageHelper {
             if (urlToLoad.startsWith(HTTP_SCHEME) && !isCached(urlToLoad)) return
         }
 
-        target.load(urlToLoad) {
-            crossfade(true)
-            listener(
-                onSuccess = { _, _ ->
-                    // set the background to white for transparent images
-                    if (whiteBackground) target.setBackgroundColor(Color.WHITE)
-                }
-            )
-        }
+        // Try the rewritten URL, then the original one. Without the second
+        // attempt a broken image proxy left every thumbnail blank.
+        loadWithFallback(
+            if (urlToLoad == url) listOf(url) else listOf(urlToLoad, url),
+            target,
+            whiteBackground,
+            index = 0,
+            onResult = null
+        )
     }
 
     /**
@@ -158,7 +158,8 @@ object ImageHelper {
 
     private fun buildFallbackChain(url: String): List<String> {
         if (!ThumbnailHelper.isYouTubeThumbnail(url)) {
-            return listOf(ProxyHelper.rewriteUrlUsingProxyPreference(url))
+            val proxied = ProxyHelper.rewriteUrlUsingProxyPreference(url)
+            return if (proxied == url) listOf(url) else listOf(proxied, url)
         }
 
         val result = mutableListOf<String>()
@@ -173,6 +174,11 @@ object ImageHelper {
         }
         val originalProxied = ProxyHelper.rewriteUrlUsingProxyPreference(url)
         if (originalProxied !in result) result.add(originalProxied)
+
+        // Last resort: the untouched URL. Every other candidate goes through the
+        // instance's image proxy, so a dead proxy used to mean no thumbnails at
+        // all, everywhere in the app, while the feed itself still worked.
+        if (url !in result) result.add(url)
         return result
     }
 
@@ -219,7 +225,10 @@ object ImageHelper {
                     if (whiteBackground) target.setBackgroundColor(Color.WHITE)
                     onResult?.invoke(true)
                 },
-                onError = { _, _ -> onError?.invoke() }
+                onError = { _, error ->
+                    android.util.Log.w("ImageHelper", "could not load $url", error)
+                    onError?.invoke()
+                }
             )
         }
     }
