@@ -226,7 +226,10 @@ object ImageHelper {
                     onResult?.invoke(true)
                 },
                 onError = { _, error ->
-                    android.util.Log.w("ImageHelper", "could not load $url", error)
+                    android.util.Log.w(
+                        "ImageHelper",
+                        "could not load $url: " + (error.throwable?.message ?: "unknown")
+                    )
                     onError?.invoke()
                 }
             )
