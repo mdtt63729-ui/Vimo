@@ -1,0 +1,7 @@
+Vimo 33.30
+
+- Create playlist is now a button next to History and Downloads instead of a
+  floating button in the corner.
+- Coming back to Home no longer reloads the feed, so the thumbnails stay put.
+- Switching between the category chips no longer refetches a category that was
+  already loaded; All, Explore, Gaming and the rest come back instantly.

@@ -160,10 +160,9 @@ class LibraryFragment : DynamicLayoutManagerFragment(R.layout.fragment_library) 
     }
 
     private fun updateFABMargin(isMiniPlayerVisible: Boolean) {
-        // optimize CreatePlaylistFab bottom margin if miniPlayer active
-        binding.createPlaylist.updateLayoutParams<MarginLayoutParams> {
-            bottomMargin = (if (isMiniPlayerVisible) 64f else 16f).dpToPx()
-        }
+        // Create playlist is no longer a floating button in the corner - it sits in
+        // the row with History and Downloads and scrolls with the content, so the
+        // mini player cannot cover it and there is no margin to adjust.
     }
 
     private fun fetchPlaylists() {

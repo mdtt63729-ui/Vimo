@@ -60,6 +60,12 @@ class HomeViewModel : ViewModel() {
 
     private var loadHomeJob: Job? = null
     private var recFeedJob: Job? = null
+
+    /**
+     * What each chip already loaded, so going All -> Explore -> All puts the old
+     * list straight back instead of fetching it again and flashing the skeletons.
+     */
+    private val categoryCache = mutableMapOf<String, List<HomeFeedItem>>()
     private var loadMoreJob: Job? = null
 
     // Recommendation engine coordinator
@@ -199,6 +205,21 @@ class HomeViewModel : ViewModel() {
      */
     fun loadCategory(context: Context, category: String) {
         selectedCategory.value = category
+
+        // Already loaded once: restore it and stop. Nothing is fetched and the
+        // thumbnails come back from Coil's cache, so the switch is instant.
+        val remembered = categoryCache[category]
+        if (remembered != null && remembered.isNotEmpty()) {
+            recFeedJob?.cancel()
+            feedState.value = HomeFeedState(
+                items = remembered,
+                status = HomeUiStatus.SUCCESS,
+                hasMore = true,
+                selectedCategory = category
+            )
+            return
+        }
+
         val region = PreferenceHelper.getTrendingRegion(context)
 
         // Emit explicit LOADING state with skeleton items immediately
@@ -216,6 +237,7 @@ class HomeViewModel : ViewModel() {
                 // Stale request protection: only update if this category is still selected
                 if (selectedCategory.value != category) return@launch
                 if (state.items.isNotEmpty()) {
+                    categoryCache[category] = state.items
                     feedState.postValue(state.copy(status = HomeUiStatus.SUCCESS))
                 } else {
                     feedState.postValue(state.copy(status = HomeUiStatus.EMPTY))

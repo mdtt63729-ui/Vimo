@@ -128,9 +128,16 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             homeViewModel.loadRecommendationFeed(requireContext(), forceRefresh = true)
         }
 
-        // Only fetch when there is nothing to show yet: returning to this tab must
-        // not reload the feed and swap the videos out.
-        if (homeFeedAdapter.itemCount == 0) {
+        // Only fetch when the view model has genuinely nothing. The adapter of a
+        // freshly created fragment is always empty, so testing it meant every trip
+        // back to Home started a new load: the list was replaced, the skeletons
+        // came back and the thumbnails went grey until they downloaded again.
+        // The observer below re-attaches the existing list instead.
+        val current = homeViewModel.feedState.value
+        val alreadyLoaded = current != null &&
+            current.items.isNotEmpty() &&
+            (current.status == HomeUiStatus.SUCCESS || current.status == HomeUiStatus.LOADING)
+        if (!alreadyLoaded) {
             homeViewModel.loadRecommendationFeed(requireContext(), forceRefresh = false)
         }
     }
