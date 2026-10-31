@@ -76,6 +76,19 @@ object YtDlpEngine {
         }.getOrDefault(false)
     }
 
+    /**
+     * True when the app actually ships ffmpeg. Merging separate video and audio
+     * streams is impossible without it, so the fetch screen only offers a
+     * "merge everything" download when this says yes.
+     */
+    fun ffmpegAvailable(): Boolean {
+        val context = appContext ?: return false
+        if (!ensureStarted(context)) return false
+        return runCatching {
+            bridge(context).callAttr("ffmpeg_available").toBoolean()
+        }.getOrDefault(false)
+    }
+
     fun version(): String? {
         engineVersion?.let { return it }
         val context = appContext ?: return null

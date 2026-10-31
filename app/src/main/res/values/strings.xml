@@ -631,4 +631,7 @@
     <string name="fetch_cancelled">Cancelled</string>
     <string name="fetch_best_quality">Best quality</string>
     <string name="fetch_best_quality_detail">Video + audio · merged automatically</string>
+
+    <string name="fetch_best_single">Best available</string>
+    <string name="fetch_best_single_detail">Single file · video + audio already combined</string>
 </resources>

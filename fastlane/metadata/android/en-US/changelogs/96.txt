@@ -1,0 +1,8 @@
+Vimo 33.23
+
+- The Library section has its Downloads screen back, next to History: it lists
+  the files the app downloaded, and tapping one plays it in the normal player.
+- yt-dlp downloads now pull fragmented streams in parallel with large chunk
+  reads, so they run at the speed the connection allows.
+- "Best quality" only offers a merged download when ffmpeg is actually present;
+  otherwise it falls back to the best single file instead of failing.

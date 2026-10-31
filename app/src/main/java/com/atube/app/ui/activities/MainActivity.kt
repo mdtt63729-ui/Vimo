@@ -60,6 +60,7 @@ import com.atube.app.ui.dialogs.ErrorDialog
 import com.atube.app.ui.dialogs.ImportTempPlaylistDialog
 import com.atube.app.ui.extensions.onSystemInsets
 import com.atube.app.ui.fragments.DownloadsFragment
+import com.atube.app.ui.fragments.DownloadsLibraryFragment
 import com.atube.app.ui.models.DownloadsViewModel
 import com.atube.app.ui.models.PlaylistViewModel
 import com.atube.app.ui.models.SearchViewModel
@@ -829,6 +830,7 @@ class MainActivity : AbstractPlayerHostActivity() {
             (supportFragmentManager.fragments.find { it is NavHostFragment })
                 ?.childFragmentManager?.fragments?.forEach { fragment ->
                     (fragment as? DownloadsFragment)?.bindDownloadService()
+                    (fragment as? DownloadsLibraryFragment)?.bindDownloadService()
                 }
         }
     }

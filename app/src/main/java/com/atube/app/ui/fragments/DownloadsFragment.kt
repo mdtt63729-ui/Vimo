@@ -241,12 +241,19 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             aspect = aspect
         )
 
-        // one-tap best quality, video and audio merged by the bundled ffmpeg
+        // One-tap best quality. Merging separate video and audio streams needs the
+        // bundled ffmpeg; without it yt-dlp would fail, so fall back to the best
+        // single file that already carries both.
+        val canMerge = YtDlpEngine.ffmpegAvailable()
         out += YtDlpResult.Format(
-            label = getString(R.string.fetch_best_quality),
-            detail = getString(R.string.fetch_best_quality_detail),
+            label = getString(
+                if (canMerge) R.string.fetch_best_quality else R.string.fetch_best_single
+            ),
+            detail = getString(
+                if (canMerge) R.string.fetch_best_quality_detail else R.string.fetch_best_single_detail
+            ),
             directUrl = "",
-            formatId = "bv*+ba/b",
+            formatId = if (canMerge) "bv*+ba/b" else "b",
             pageUrl = pageUrl,
             isAudio = false
         )

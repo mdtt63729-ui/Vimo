@@ -248,8 +248,14 @@ def start_download(url, format_selector, output_dir, job_id):
         "format": selector,
         "outtmpl": output_template,
         "progress_hooks": [_progress_hook(job_id)],
-        "retries": 3,
-        "fragment_retries": 3,
+        # Speed: pull fragmented streams in parallel and read in large chunks.
+        # yt-dlp defaults to one connection and 1 KB reads, which is what made
+        # downloads crawl on a fast link.
+        "concurrent_fragment_downloads": 8,
+        "http_chunk_size": 10485760,
+        "buffersize": 1048576,
+        "retries": 10,
+        "fragment_retries": 10,
         "continuedl": True,
         "overwrites": False,
         "socket_timeout": 20,

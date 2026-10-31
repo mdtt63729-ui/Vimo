@@ -85,7 +85,9 @@ class LibraryFragment : DynamicLayoutManagerFragment(R.layout.fragment_library) 
         }
 
         binding.downloads.setOnClickListener {
-            findNavController().navigate(R.id.action_libraryFragment_to_downloadsFragment)
+            // the library lists files the app downloaded itself; the yt-dlp fetch
+            // screen keeps its own downloads under the link box
+            findNavController().navigate(R.id.action_libraryFragment_to_downloadsLibraryFragment)
         }
 
         val navBarItems = NavBarHelper.getNavBarItemPreference(requireContext())
