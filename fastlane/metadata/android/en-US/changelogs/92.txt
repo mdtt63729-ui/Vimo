@@ -1,0 +1,7 @@
+Vimo 33.19
+
+- The navigation bar now has a real spring animation between tabs: the pill
+  overshoots its slot slightly and settles back, and it stretches while it
+  travels.
+- Tapping a second tab mid-flight now bends the motion smoothly instead of
+  restarting it.

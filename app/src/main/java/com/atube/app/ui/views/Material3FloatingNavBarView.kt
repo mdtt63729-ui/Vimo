@@ -17,7 +17,8 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import androidx.dynamicanimation.animation.FloatPropertyCompat
+import androidx.dynamicanimation.animation.FloatValueHolder
+import androidx.dynamicanimation.animation.DynamicAnimation
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
 import com.google.android.material.color.MaterialColors
@@ -82,8 +83,30 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     private var progress = 0f
     private var selected = 0
     private var target = 0
-    private var spring: SpringAnimation? = null
+    /** Speed of the last animation frame, used to stretch the pill while it travels. */
+    private var velocity = 0f
     var onItemSelected: ((Int) -> Unit)? = null
+
+    /**
+     * One spring for the lifetime of the view, driven through a FloatValueHolder.
+     *
+     * The previous version rebuilt a SpringAnimation on every tap and moved the
+     * value through a FloatPropertyCompat wrapper, cancelling whatever was already
+     * running. animateToFinalPosition() on a single instance is the supported way
+     * to retarget a spring: it keeps the current velocity, so a second tap mid
+     * flight bends the motion instead of snapping it.
+     */
+    private val progressHolder = FloatValueHolder(0f)
+    private val spring = SpringAnimation(progressHolder).apply {
+        spring = SpringForce(0f).apply {
+            // visibly bouncy: overshoots its slot, settles back, then stops
+            dampingRatio = DAMPING
+            stiffness = STIFFNESS
+        }
+        addUpdateListener { _: DynamicAnimation<*>, value: Float, v: Float ->
+            setProgress(value, v)
+        }
+    }
 
     // ---- geometry -----------------------------------------------------------
     private val barHeight = dp(64f).toInt()
@@ -179,11 +202,8 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     private fun select(index: Int, notify: Boolean, animate: Boolean = true) {
         val safeIndex = index.coerceIn(destinations.indices)
 
-        // Already settled, or already gliding to this same slot: leave the spring
-        // alone instead of restarting it from zero velocity mid-flight.
-        val settled = safeIndex == selected && abs(progress - safeIndex) < 0.001f
-        val alreadyHeading = spring?.isRunning == true && target == safeIndex
-        if (settled || alreadyHeading) {
+        // Already settled on this slot: nothing to animate.
+        if (safeIndex == selected && abs(progress - safeIndex) < 0.001f) {
             if (notify) onItemSelected?.invoke(safeIndex)
             return
         }
@@ -196,22 +216,12 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
                 if (i == selected) "${destinations[i].label}, selected" else destinations[i].label
         }
 
-        spring?.cancel()
         if (animate) {
-            spring = SpringAnimation(this, PROGRESS_PROPERTY).apply {
-                spring = SpringForce(safeIndex.toFloat()).apply {
-                    // near-critical damping: one clean glide, no wobble at the end
-                    dampingRatio = DAMPING
-                    stiffness = STIFFNESS
-                }
-                setStartVelocity(0f)
-                start()
-            }
+            // keeps the running velocity, so a mid-flight retarget bends smoothly
+            spring.animateToFinalPosition(safeIndex.toFloat())
         } else {
-            progress = safeIndex.toFloat()
-            layoutSlots()
-            updateAnimatedChildren()
-            invalidate()
+            spring.cancel()
+            setProgress(safeIndex.toFloat(), 0f)
         }
 
         if (notify) onItemSelected?.invoke(safeIndex)
@@ -319,10 +329,33 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
         val pillBottom = (height + innerHeight) / 2f - pillInset
         val radius = (pillBottom - pillTop) / 2f
 
+        // While the pill is travelling it stretches along the direction of motion
+        // and pulls back in as it settles. This is what makes a long jump read as
+        // liquid rather than as two discrete positions.
+        val stretch = (abs(velocity) * STRETCH_FACTOR)
+            .coerceAtMost(MAX_STRETCH) * pillWidth
+        val centre = pillLeft + pillWidth / 2f
+        var left = centre - (pillWidth + stretch) / 2f
+        var right = centre + (pillWidth + stretch) / 2f
+
+        // never let the stretch push the pill outside the bar
+        val minLeft = outerInset
+        val maxRight = width - outerInset
+        if (left < minLeft) {
+            right += minLeft - left
+            left = minLeft
+        }
+        if (right > maxRight) {
+            left -= right - maxRight
+            right = maxRight
+        }
+        left = left.coerceAtLeast(minLeft)
+        right = right.coerceAtMost(maxRight)
+
         indicatorRect.set(
-            pillLeft + pillInset,
+            left + pillInset,
             pillTop,
-            pillLeft + pillWidth - pillInset,
+            right - pillInset,
             pillBottom
         )
         canvas.drawRoundRect(indicatorRect, radius, radius, indicatorPaint)
@@ -330,7 +363,8 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
 
     // ---- animation ----------------------------------------------------------
 
-    private fun setProgress(value: Float) {
+    private fun setProgress(value: Float, v: Float = 0f) {
+        velocity = v
         progress = value.coerceIn(0f, destinations.lastIndex.toFloat())
         layoutSlots()
         updateAnimatedChildren()
@@ -361,19 +395,20 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     }
 
     override fun onDetachedFromWindow() {
-        spring?.cancel()
-        spring = null
+        spring.cancel()
         super.onDetachedFromWindow()
     }
 
     companion object {
-        /** Smooth rather than snappy: a 300-400 ms glide with almost no overshoot. */
-        private const val STIFFNESS = 170f
-        private const val DAMPING = 0.88f
+        /**
+         * Under-damped on purpose: 0.55 overshoots the target slot by roughly a
+         * tenth of the distance and eases back, which is the bounce.
+         */
+        private const val STIFFNESS = 240f
+        private const val DAMPING = 0.55f
 
-        private val PROGRESS_PROPERTY = object : FloatPropertyCompat<Material3FloatingNavBarView>("navProgress") {
-            override fun getValue(view: Material3FloatingNavBarView): Float = view.progress
-            override fun setValue(view: Material3FloatingNavBarView, value: Float) = view.setProgress(value)
-        }
+        /** How far the pill stretches horizontally per unit of travel speed. */
+        private const val STRETCH_FACTOR = 0.0022f
+        private const val MAX_STRETCH = 0.16f
     }
 }
