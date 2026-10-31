@@ -16,6 +16,9 @@ import android.view.ViewGroup
 import android.view.ViewGroup.MarginLayoutParams
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
+import com.atube.app.helpers.ImageHelper
+import android.view.Gravity
+import android.graphics.Color
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
@@ -125,6 +128,12 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     private var fetchJob: Job? = null
     private var skeletonJob: Job? = null
 
+    private var fetchedVideo: YtDlpResult.Video? = null
+    private var videoFormats: List<YtDlpResult.Format> = emptyList()
+    private var audioFormats: List<YtDlpResult.Format> = emptyList()
+    private var selectedFormat: YtDlpResult.Format? = null
+    private var audioMode = false
+
     private val downloadRows = mutableMapOf<String, ItemYtdlpDownloadBinding>()
     /** jobId -> videoId of the row registered in the download database. */
     private val downloadedIds = mutableMapOf<String, String>()
@@ -139,8 +148,6 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             onVideoClick = { video -> if (video.url.isNotBlank()) fetchLink(video.url) },
             onFormatDownload = { format -> startDownload(format) }
         )
-        binding.fetchResults.layoutManager = LinearLayoutManager(requireContext())
-        binding.fetchResults.adapter = adapter
 
         binding.fetchButton.setOnClickListener { startFetch() }
         binding.linkInput.setOnEditorActionListener { _, actionId, _ ->
@@ -152,6 +159,16 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             }
         }
         binding.pasteButton.setOnClickListener { pasteFromClipboard() }
+
+        binding.videoMode.setOnClickListener {
+            if (audioMode) { audioMode = false; renderMode() }
+        }
+        binding.audioMode.setOnClickListener {
+            if (!audioMode) { audioMode = true; renderMode() }
+        }
+        binding.downloadButton.setOnClickListener {
+            selectedFormat?.let { startDownload(it) }
+        }
 
         shimmerSkeleton()
         showEmpty(getString(R.string.fetch_empty_message))
@@ -298,8 +315,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                 if (items.isEmpty()) {
                     showEmpty(getString(R.string.fetch_no_results))
                 } else {
-                    adapter.submitList(items)
-                    showResults()
+                    showPreview(items)
                 }
             }.onFailure { error ->
                 val message = error.message?.takeIf { it.isNotBlank() }
@@ -702,20 +718,120 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     private fun showLoading() {
         binding.fetchSkeleton.isVisible = true
         binding.fetchEmpty.isVisible = false
-        binding.fetchResults.isVisible = false
-    }
-
-    private fun showResults() {
-        binding.fetchSkeleton.isVisible = false
-        binding.fetchEmpty.isVisible = false
-        binding.fetchResults.isVisible = true
+        binding.previewSection.isVisible = false
     }
 
     private fun showEmpty(message: String) {
         binding.fetchSkeleton.isVisible = false
-        binding.fetchResults.isVisible = false
+        binding.previewSection.isVisible = false
         binding.fetchEmpty.isVisible = true
         binding.fetchEmptyMessage.text = message
+    }
+
+    /**
+     * One video, one preview: a large thumbnail, its title, then the Video/Audio
+     * switch and the qualities that belong to it. No list of videos and no list of
+     * every stream - only what can be downloaded for this video.
+     */
+    private fun showPreview(items: List<YtDlpResult>) {
+        val video = items.filterIsInstance<YtDlpResult.Video>().firstOrNull()
+        if (video == null) {
+            showEmpty(getString(R.string.fetch_no_results))
+            return
+        }
+
+        binding.fetchSkeleton.isVisible = false
+        binding.fetchEmpty.isVisible = false
+
+        fetchedVideo = video
+        currentTitle = video.title
+        binding.previewTitle.text = video.title
+        binding.previewDescription.text = video.uploader.ifBlank {
+            getString(R.string.fetch_downloads)
+        }
+
+        val density = resources.displayMetrics.density
+        val width = (resources.displayMetrics.widthPixels - (40 * density).toInt()).coerceAtLeast(1)
+        val ratio = video.aspect.takeIf { it in 0.4f..2.5f } ?: (16f / 9f)
+        val height = (width / ratio).toInt().coerceIn((180 * density).toInt(), (520 * density).toInt())
+        binding.previewThumbnail.layoutParams = binding.previewThumbnail.layoutParams.apply {
+            this.width = width
+            this.height = height
+        }
+        ImageHelper.loadImageHighQuality(video.thumbnail, binding.previewThumbnail)
+
+        // video: the streams that already carry picture and sound
+        videoFormats = items.filterIsInstance<YtDlpResult.Format>().filter { !it.isAudio }
+        // audio: the same video turned into a song by the bundled ffmpeg
+        audioFormats = listOf(
+            YtDlpResult.Format(
+                label = "MP3 · 192 kbps",
+                detail = getString(R.string.dl_converted_mp3),
+                directUrl = "",
+                formatId = "mp3",
+                pageUrl = video.url,
+                isAudio = true,
+                convertToMp3 = true
+            )
+        )
+
+        audioMode = false
+        renderMode()
+        binding.previewSection.isVisible = true
+    }
+
+    private fun renderMode() {
+        val density = resources.displayMetrics.density
+        binding.videoMode.setBackgroundResource(
+            if (audioMode) 0 else R.drawable.bg_capsule_selected
+        )
+        binding.audioMode.setBackgroundResource(
+            if (audioMode) R.drawable.bg_capsule_selected else 0
+        )
+        binding.videoMode.setTextColor(
+            if (audioMode) ContextCompat.getColor(requireContext(), R.color.dl_muted)
+            else Color.WHITE
+        )
+        binding.audioMode.setTextColor(
+            if (audioMode) Color.WHITE
+            else ContextCompat.getColor(requireContext(), R.color.dl_muted)
+        )
+
+        val formats = if (audioMode) audioFormats else videoFormats
+        selectedFormat = formats.firstOrNull()
+
+        binding.qualityContainer.removeAllViews()
+        formats.forEach { format ->
+            val chip = TextView(requireContext()).apply {
+                text = format.label
+                textSize = 13f
+                gravity = Gravity.CENTER
+                setPadding(
+                    (16 * density).toInt(), (10 * density).toInt(),
+                    (16 * density).toInt(), (10 * density).toInt()
+                )
+                setBackgroundResource(
+                    if (format == selectedFormat) R.drawable.bg_capsule_selected
+                    else R.drawable.bg_capsule
+                )
+                setTextColor(
+                    if (format == selectedFormat) Color.WHITE
+                    else ContextCompat.getColor(context, R.color.dl_ink)
+                )
+                setOnClickListener {
+                    selectedFormat = format
+                    renderMode()
+                }
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                params.marginEnd = (8 * density).toInt()
+                layoutParams = params
+            }
+            binding.qualityContainer.addView(chip)
+        }
+        binding.downloadButton.isEnabled = formats.isNotEmpty()
     }
 
     override fun onDestroyView() {

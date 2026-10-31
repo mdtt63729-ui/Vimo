@@ -1,0 +1,7 @@
+Vimo 33.44
+
+- The Downloader shows one fetched video: a large thumbnail, its title, then the
+  Video / Audio switch and the qualities for that video only.
+- Video offers the streams that already carry picture and sound; Audio offers MP3,
+  converted from the same video with the bundled ffmpeg.
+- Fetching shows the shimmering skeleton while it works.

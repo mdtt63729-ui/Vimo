@@ -672,4 +672,10 @@
     <string name="dl_subtitle">Paste a video or audio link to get started.</string>
     <string name="dl_paste">Paste URL</string>
     <string name="dl_fetch">↓   Fetch media</string>
+
+    <string name="dl_mode_video">▣   Video</string>
+    <string name="dl_mode_audio">♫   Audio</string>
+    <string name="dl_download">↓   Download</string>
+
+    <string name="dl_converted_mp3">Converted with ffmpeg</string>
 </resources>
