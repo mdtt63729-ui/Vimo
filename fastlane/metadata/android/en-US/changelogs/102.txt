@@ -1,0 +1,4 @@
+Vimo 33.29
+
+- Pinterest links work in the Downloader: pinterest.com and pin.it pins are read
+  on the device, and the pin's video or image downloads directly.

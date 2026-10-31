@@ -287,7 +287,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         // bundled ffmpeg; without it yt-dlp would fail, so fall back to the best
         // single file that already carries both.
         val canMerge = YtDlpEngine.ffmpegAvailable()
-        out += YtDlpResult.Format(
+        val isDirectMedia = json.optString("extractor") == "pinterest"
+        if (!isDirectMedia) out += YtDlpResult.Format(
             label = getString(
                 if (canMerge) R.string.fetch_best_quality else R.string.fetch_best_single
             ),
@@ -301,7 +302,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         )
 
         // MP3 needs ffmpeg's encoder, so it is only offered when it is bundled
-        if (canMerge) {
+        if (canMerge && !isDirectMedia) {
             out += YtDlpResult.Format(
                 label = getString(R.string.fetch_audio_mp3),
                 detail = getString(R.string.fetch_audio_mp3_detail),
@@ -408,6 +409,11 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             val ok = withContext(Dispatchers.IO) {
                 if (format.convertToMp3) {
                     YtDlpEngine.startAudioDownload(format.pageUrl, directory.toFile(), jobId)
+                } else if (format.formatId == "direct") {
+                    // Pinterest hands back the media URL itself, not a page to extract
+                    YtDlpEngine.startDownload(
+                        format.directUrl, "direct", directory.toFile(), jobId
+                    )
                 } else {
                     YtDlpEngine.startDownload(
                         format.pageUrl, format.formatId, directory.toFile(), jobId

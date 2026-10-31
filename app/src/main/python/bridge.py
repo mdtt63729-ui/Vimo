@@ -50,7 +50,6 @@ def prepare_ffmpeg(native_lib_dir, work_dir):
                 os.symlink(src, dst)
             except Exception:
                 import shutil
-import subprocess
                 shutil.copy2(src, dst)
                 os.chmod(dst, 0o755)
         _FFMPEG_DIR = work_dir if found else None
@@ -208,6 +207,8 @@ def extract_info(url):
         "retries": 2,
     }
     opts.update(_ffmpeg_opts())
+    if _is_pinterest(url):
+        return pinterest_extract(url)
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -242,6 +243,11 @@ def start_download(url, format_selector, output_dir, job_id):
     os.makedirs(output_dir, exist_ok=True)
     output_template = os.path.join(output_dir, "%(extractor)s_%(title).120B_%(id)s.%(ext)s")
     selector = (format_selector or "").strip() or "bv*+ba/b"
+    if selector == "direct":
+        import re as _re
+        ext = os.path.splitext(url.split("?")[0])[1] or ".mp4"
+        name = _re.sub(r"[^A-Za-z0-9._ -]", "_", (url.rstrip("/").rsplit("/", 1)[-1] or "media"))[:80]
+        return download_direct(url, os.path.join(output_dir, name + ext), job_id)
     opts = {
         "quiet": True,
         "no_warnings": True,
@@ -382,6 +388,204 @@ def convert_audio(input_path, output_path, bitrate="192k"):
         return json.dumps({"ok": True, "path": output_path})
     except Exception as e:
         return json.dumps({"ok": False, "error": str(e)[:400]})
+
+
+# ---------------------------------------------------------------------------
+# Pinterest
+#
+# yt-dlp has no working Pinterest extractor, so pinterest.com and pin.it links
+# are read here instead: the pin page is fetched, its Open Graph tags and the
+# JSON blobs it embeds are mined for the media URL, and that URL is handed back
+# in the same shape extract_info() returns. Ported from the standalone
+# Pinterest script, minus the Flask server - everything runs on the device.
+# ---------------------------------------------------------------------------
+
+_PINTEREST_HOSTS = ("pinterest.com", "pin.it")
+
+
+def _is_pinterest(url):
+    try:
+        from urllib.parse import urlparse
+        host = (urlparse(url).hostname or "").lower()
+    except Exception:
+        return False
+    return any(host == h or host.endswith("." + h) for h in _PINTEREST_HOSTS)
+
+
+def _http_get(url, timeout=20):
+    """Minimal HTTPS GET that follows redirects, using only the stdlib."""
+    import urllib.request
+
+    req = urllib.request.Request(url, headers={
+        "User-Agent": (
+            "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/json,*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+    })
+    with urllib.request.urlopen(req, timeout=timeout) as response:
+        charset = response.headers.get_content_charset() or "utf-8"
+        return response.read().decode(charset, "replace"), response.geturl()
+
+
+def _pinterest_media(html):
+    """Pulls the video/image URL and title out of a pin page."""
+    from html.parser import HTMLParser
+
+    class Parser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.meta = {}
+
+        def handle_starttag(self, tag, attrs):
+            if tag != "meta":
+                return
+            data = dict(attrs)
+            key = data.get("property") or data.get("name") or data.get("itemprop")
+            value = data.get("content")
+            if key and value:
+                self.meta[key.lower()] = value
+
+    parser = Parser()
+    try:
+        parser.feed(html)
+    except Exception:
+        pass
+    meta = parser.meta
+
+    image = meta.get("og:image") or meta.get("twitter:image") or meta.get("og:image:url")
+    video = (
+        meta.get("og:video:secure_url")
+        or meta.get("og:video")
+        or meta.get("og:video:url")
+        or meta.get("twitter:player:stream")
+    )
+    title = meta.get("og:title") or meta.get("twitter:title") or "Pinterest media"
+    description = meta.get("og:description") or meta.get("description") or ""
+
+    # the page embeds the full-size media in its JSON blobs as well
+    if not video or not image:
+        patterns = [
+            r'"url"\s*:\s*"(https?[^"]+\.(?:mp4|m3u8)[^"]*)"',
+            r'"orig"\s*:\s*\{\s*"url"\s*:\s*"([^"]+)"',
+            r'"contentUrl"\s*:\s*"([^"]+)"',
+        ]
+        for pattern in patterns:
+            try:
+                for value in re.findall(pattern, html, re.I | re.S):
+                    value = value.replace("\\u002F", "/").replace("\\/", "/").replace("&amp;", "&")
+                    if not value.startswith("http"):
+                        continue
+                    if re.search(r"\.(mp4|m3u8)", value, re.I):
+                        video = video or value
+                    elif re.search(r"\.(jpg|jpeg|png|webp)", value, re.I):
+                        image = image or value
+            except Exception:
+                pass
+
+    return title, description, image, video
+
+
+def pinterest_extract(url):
+    url = (url or "").strip()
+    if not url.startswith(("https://", "http://")):
+        return json.dumps({"ok": False, "error": "Enter a valid http or https URL."})
+    if not _is_pinterest(url):
+        return json.dumps({"ok": False, "error": "That is not a Pinterest link."})
+
+    try:
+        html, final_url = _http_get(url)
+        title, description, image, video = _pinterest_media(html)
+        if not video and not image:
+            return json.dumps({
+                "ok": False,
+                "error": "No media was found on that Pin.",
+            })
+
+        media_url = video or image
+        formats = [{
+            "format_id": "direct",
+            "url": media_url,
+            "ext": "mp4" if video else "jpg",
+            "resolution": "original",
+            "height": 0,
+            "width": 0,
+            "fps": 0,
+            "filesize": 0,
+            "vcodec": "unknown" if video else "none",
+            "acodec": "unknown" if video else "none",
+            "has_video": bool(video),
+            "has_audio": bool(video),
+            "note": "Pinterest",
+            "tbr": 0,
+            "abr": 0,
+            "protocol": "https",
+        }]
+
+        return json.dumps({
+            "ok": True,
+            "id": final_url.rstrip("/").rsplit("/", 1)[-1],
+            "title": title,
+            "description": description,
+            "duration": 0,
+            "thumbnail": image or (video or ""),
+            "uploader": "Pinterest",
+            "extractor": "pinterest",
+            "webpage_url": final_url,
+            "is_live": False,
+            "formats": formats,
+        })
+    except Exception as e:
+        return json.dumps({"ok": False, "error": (str(e).strip() or "Could not read that Pin.")[:400]})
+
+
+def download_direct(url, out_path, job_id):
+    """Streams a direct media URL to out_path, writing the same progress file."""
+    import urllib.request
+
+    job_id = str(job_id)
+    try:
+        out_dir = os.path.dirname(out_path)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+
+        req = urllib.request.Request(url, headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
+            ),
+            "Accept": "*/*",
+        })
+        _write_progress(job_id, {"status": "downloading", "percent": 0, "message": "Downloading"})
+        with urllib.request.urlopen(req, timeout=30) as response, open(out_path, "wb") as fh:
+            total = int(response.headers.get("Content-Length") or 0)
+            done = 0
+            while True:
+                if job_id in _cancelled:
+                    raise Exception("Cancelled")
+                chunk = response.read(262144)
+                if not chunk:
+                    break
+                fh.write(chunk)
+                done += len(chunk)
+                percent = (done / total * 100.0) if total else 0.0
+                _write_progress(job_id, {
+                    "status": "downloading",
+                    "percent": round(percent, 1),
+                    "downloaded_bytes": done,
+                    "total_bytes": total,
+                    "message": "Downloading",
+                })
+        _write_progress(job_id, {"status": "finished", "percent": 100, "message": "Download complete"})
+        return json.dumps({"ok": True, "path": out_path})
+    except Exception as e:
+        cancelled = job_id in _cancelled
+        _write_progress(job_id, {
+            "status": "cancelled" if cancelled else "error",
+            "message": "Cancelled" if cancelled else str(e)[:400],
+        })
+        return json.dumps({"ok": False, "error": "Cancelled" if cancelled else str(e)[:400]})
 
 
 def cancel_job(job_id):
