@@ -82,6 +82,9 @@ class MainActivity : AbstractPlayerHostActivity() {
     private var lastNavItemId: Int = -1
     private var lastNavTimeMs: Long = 0L
     private companion object {
+        private const val PREF_TELEGRAM_JOINED = "telegram_channel_joined"
+        private const val TAG_TELEGRAM_SHEET = "telegram_sheet"
+
         const val NAV_DEBOUNCE_MS = 200L
         const val LOW_NETWORK_WARNING_INTERVAL_MS = 120_000L
         const val LOW_NETWORK_POPUP_VISIBLE_MS = 6_000L
@@ -137,6 +140,45 @@ class MainActivity : AbstractPlayerHostActivity() {
         }
     }
 
+    /**
+     * Shows the join-the-channel sheet on first launch. While it is up the content
+     * behind it is blurred on API 31+, and the app cannot be used: the sheet cannot
+     * be dismissed and nothing behind it takes touch.
+     */
+    private fun setUpTelegramGate() {
+        if (PreferenceHelper.getBoolean(PREF_TELEGRAM_JOINED, false)) return
+
+        setContentBlurred(true)
+        supportFragmentManager.setFragmentResultListener(
+            com.atube.app.ui.sheets.TelegramSheetFragment.REQUEST_KEY, this
+        ) { _, result ->
+            if (result.getBoolean(com.atube.app.ui.sheets.TelegramSheetFragment.JOINED)) {
+                PreferenceHelper.putBoolean(PREF_TELEGRAM_JOINED, true)
+                setContentBlurred(false)
+            }
+        }
+        if (supportFragmentManager.findFragmentByTag(TAG_TELEGRAM_SHEET) == null) {
+            com.atube.app.ui.sheets.TelegramSheetFragment()
+                .show(supportFragmentManager, TAG_TELEGRAM_SHEET)
+        }
+    }
+
+    private fun setContentBlurred(blurred: Boolean) {
+        val root = binding.root
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            root.setRenderEffect(
+                if (blurred) {
+                    android.graphics.RenderEffect.createBlurEffect(
+                        16f, 16f, android.graphics.Shader.TileMode.CLAMP
+                    )
+                } else null
+            )
+        }
+        // the blur alone does not stop taps, so the content is also made untouchable
+        root.isEnabled = !blurred
+        root.isClickable = blurred
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -162,6 +204,10 @@ class MainActivity : AbstractPlayerHostActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             com.atube.app.api.muso.MusoStreamResolver.preWarm()
         }
+
+        // The channel gate comes up once per install, right after the splash, with
+        // the screen behind it blurred and the app locked until Join is tapped.
+        setUpTelegramGate()
 
         // manually apply additional padding for edge-to-edge compatibility
         // see https://developer.android.com/develop/ui/views/layout/edge-to-edge

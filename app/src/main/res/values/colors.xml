@@ -428,4 +428,5 @@
     <color name="dl_soft">#F3F3F3</color>
     <color name="dl_line">#E7E7E7</color>
     <color name="dl_danger">#B42318</color>
+    <color name="tg_blue">#26A5E4</color>
 </resources>

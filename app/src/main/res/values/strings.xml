@@ -678,4 +678,11 @@
     <string name="dl_download">↓   Download</string>
 
     <string name="dl_converted_mp3">Converted with ffmpeg</string>
+
+    <string name="tg_channel_name">Aether OS — App Store</string>
+    <string name="tg_channel_link">t.me/Aether_OS_app_store</string>
+    <string name="tg_description">Join our official Telegram channel for new templates, feature announcements, and community support.</string>
+    <string name="tg_join">Join Telegram</string>
+    <string name="tg_later">Maybe Later</string>
+    <string name="tg_must_join">Join the Telegram channel to continue</string>
 </resources>

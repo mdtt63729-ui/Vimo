@@ -1,0 +1,5 @@
+Vimo 33.46
+
+- The Telegram channel sheet appears once, right after the splash, exactly as in
+  the supplied design. The screen behind it is blurred and the app stays locked
+  until Join Telegram is tapped.
