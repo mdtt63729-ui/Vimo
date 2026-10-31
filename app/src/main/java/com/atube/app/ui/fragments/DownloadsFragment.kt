@@ -496,15 +496,26 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         val dao = Database.downloadDao()
 
         withContext(Dispatchers.IO) {
+            // Type is decided by what landed on disk, not by which button was
+            // pressed: an audio-only download registered as VIDEO made the offline
+            // player look for a video track that is not there and fail with
+            // "Source error".
+            val audioExtensions = setOf("m4a", "mp3", "opus", "ogg", "webm", "aac", "wav")
+            val isAudioFile = format.isAudio || file.extension.lowercase() in audioExtensions
+
             dao.insertDownload(
                 Download(
                     videoId = videoId,
-                    title = currentTitle.ifBlank { file.nameWithoutExtension }
+                    title = currentTitle.ifBlank { file.nameWithoutExtension },
+                    // without a date the list rendered "56 years ago"
+                    uploadDate = kotlinx.datetime.Clock.System.todayIn(
+                        kotlinx.datetime.TimeZone.currentSystemDefault()
+                    )
                 )
             )
             dao.insertDownloadItem(
                 DownloadItem(
-                    type = if (format.isAudio) FileType.AUDIO else FileType.VIDEO,
+                    type = if (isAudioFile) FileType.AUDIO else FileType.VIDEO,
                     videoId = videoId,
                     fileName = file.name,
                     path = file.toPath(),
@@ -749,12 +760,11 @@ class DownloadsFragmentPage : DynamicLayoutManagerFragment(R.layout.fragment_dow
             val downloads = withContext(Dispatchers.IO) {
                 Database.downloadDao().getAll()
             }.let { downloads ->
-                // Files pulled from the Downloader tab's yt-dlp fetch belong to
-                // that screen, not here; they are registered in the database only
-                // so they can play in the app's own player.
-                val appDownloads = downloads.filterNot { it.download.videoId.startsWith(YTDLP_ID_PREFIX) }
-                if (downloadTab != DownloadTab.PLAYLIST) appDownloads.filterByTab(downloadTab)
-                else appDownloads.filter { playlistItems.orEmpty().contains(it.download.videoId) }
+                // Everything the app downloaded is listed here, including what the
+                // Downloader tab's yt-dlp fetch saved, so there is one place to find
+                // a downloaded file.
+                if (downloadTab != DownloadTab.PLAYLIST) downloads.filterByTab(downloadTab)
+                else downloads.filter { playlistItems.orEmpty().contains(it.download.videoId) }
             }
 
             submitDownloadList(downloads)

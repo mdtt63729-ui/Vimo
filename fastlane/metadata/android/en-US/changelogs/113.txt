@@ -1,0 +1,8 @@
+Vimo 33.40
+
+- Files downloaded from the Downloader tab now appear in Library > Downloads as
+  well, so there is one place to find everything the app has downloaded.
+- A download is registered with the type it actually is on disk, which stops the
+  offline player looking for a video track in an audio file and failing with
+  "Source error".
+- Downloaded rows no longer show a bogus "56 years ago" date.
