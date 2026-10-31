@@ -172,6 +172,25 @@ object YtDlpEngine {
         }.getOrDefault(false)
     }
 
+    /**
+     * Re-encodes a file's audio to MP3 with the bundled ffmpeg. Blocks, so call
+     * it off the main thread. Returns the raw JSON from the bridge.
+     */
+    fun convertAudio(inputPath: String, outputPath: String, bitrate: String): JSONObject {
+        val context = appContext ?: return JSONObject("{\"ok\":false}")
+        if (!ensureStarted(context)) return JSONObject("{\"ok\":false}")
+        prepare(context)
+        val raw = runCatching {
+            bridge(context)
+                .callAttr("convert_audio", inputPath, outputPath, bitrate)
+                .toString()
+        }.getOrElse {
+            return JSONObject("{\"ok\":false,\"error\":\"The engine could not start.\"}")
+        }
+        return runCatching { JSONObject(raw) }
+            .getOrDefault(JSONObject("{\"ok\":false}"))
+    }
+
     fun cancel(jobId: String) {
         val context = appContext ?: return
         if (!started) return

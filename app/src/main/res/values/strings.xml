@@ -637,4 +637,18 @@
 
     <string name="fetch_audio_mp3">Audio · MP3</string>
     <string name="fetch_audio_mp3_detail">192 kbps · converted with ffmpeg</string>
+
+    <string name="converter_title">Convert to MP3</string>
+    <string name="converter_subtitle">Pick a downloaded file, choose a bitrate, and the bundled ffmpeg writes an MP3 next to your other audio.</string>
+    <string name="converter_bitrate_128">128 kbps</string>
+    <string name="converter_bitrate_192">192 kbps</string>
+    <string name="converter_bitrate_256">256 kbps</string>
+    <string name="converter_bitrate_320">320 kbps</string>
+    <string name="converter_no_files">Nothing to convert yet. Download something first.</string>
+    <string name="converter_convert">Convert</string>
+    <string name="converter_working">Converting…</string>
+    <string name="converter_done">Saved as %1$s</string>
+    <string name="converter_done_short">Saved to the audio folder</string>
+    <string name="converter_failed">The conversion failed</string>
+    <string name="converter">Converter</string>
 </resources>

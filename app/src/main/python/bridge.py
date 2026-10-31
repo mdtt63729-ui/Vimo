@@ -50,6 +50,7 @@ def prepare_ffmpeg(native_lib_dir, work_dir):
                 os.symlink(src, dst)
             except Exception:
                 import shutil
+import subprocess
                 shutil.copy2(src, dst)
                 os.chmod(dst, 0o755)
         _FFMPEG_DIR = work_dir if found else None
@@ -342,6 +343,45 @@ def start_audio_download(url, output_dir, job_id):
             "message": "Cancelled" if cancelled else str(e)[:400],
         })
         return json.dumps({"ok": False, "error": "Cancelled" if cancelled else str(e)[:400]})
+
+
+def convert_audio(input_path, output_path, bitrate="192k"):
+    """Re-encode a file's audio to MP3 with the bundled ffmpeg.
+
+    The build is deliberately minimal (LGPL, libmp3lame only), so MP3 is the one
+    encoder it carries. Returns JSON, never raises.
+    """
+    try:
+        if not _FFMPEG_DIR:
+            return json.dumps({
+                "ok": False,
+                "error": "ffmpeg is not available in this build.",
+            })
+        exe = os.path.join(_FFMPEG_DIR, "ffmpeg")
+        if not os.path.exists(exe):
+            return json.dumps({"ok": False, "error": "ffmpeg is missing from the app."})
+        if not os.path.exists(input_path):
+            return json.dumps({"ok": False, "error": "That file is gone."})
+
+        out_dir = os.path.dirname(output_path)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+
+        cmd = [
+            exe, "-y",
+            "-i", input_path,
+            "-vn",
+            "-c:a", "libmp3lame",
+            "-b:a", str(bitrate or "192k"),
+            output_path,
+        ]
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if proc.returncode != 0:
+            err = (proc.stderr or b"").decode("utf-8", "replace").strip()
+            return json.dumps({"ok": False, "error": (err or "ffmpeg failed")[-400:]})
+        return json.dumps({"ok": True, "path": output_path})
+    except Exception as e:
+        return json.dumps({"ok": False, "error": str(e)[:400]})
 
 
 def cancel_job(job_id):

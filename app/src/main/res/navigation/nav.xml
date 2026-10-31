@@ -89,6 +89,13 @@
             app:popEnterAnim="@animator/nav_default_pop_enter_anim"
             app:popExitAnim="@animator/nav_default_pop_exit_anim" />
         <action
+            android:id="@+id/action_libraryFragment_to_converterFragment"
+            app:destination="@id/converterFragment"
+            app:enterAnim="@animator/nav_default_enter_anim"
+            app:exitAnim="@animator/nav_default_exit_anim"
+            app:popEnterAnim="@animator/nav_default_pop_enter_anim"
+            app:popExitAnim="@animator/nav_default_pop_exit_anim" />
+        <action
             android:id="@+id/action_libraryFragment_to_downloadsLibraryFragment"
             app:destination="@id/downloadsLibraryFragment"
             app:enterAnim="@animator/nav_default_enter_anim"
@@ -152,6 +159,12 @@
         android:name="com.atube.app.ui.fragments.DownloadsFragment"
         android:label="@string/downloads"
         tools:layout="@layout/fragment_downloads" />
+
+    <fragment
+        android:id="@+id/converterFragment"
+        android:name="com.atube.app.ui.fragments.ConverterFragment"
+        android:label="@string/converter"
+        tools:layout="@layout/fragment_converter" />
 
     <fragment
         android:id="@+id/downloadsLibraryFragment"

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:orientation="vertical"
+    android:paddingHorizontal="16dp"
+    android:paddingTop="14dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/converter_title"
+        android:textColor="?attr/colorOnSurface"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/converter_subtitle"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textSize="13sp" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/bitrateChips"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        app:singleSelection="true"
+        app:selectionRequired="true">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/bitrate128"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/converter_bitrate_128" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/bitrate192"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="@string/converter_bitrate_192" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/bitrate256"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/converter_bitrate_256" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/bitrate320"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/converter_bitrate_320" />
+    </com.google.android.material.chip.ChipGroup>
+
+    <TextView
+        android:id="@+id/converterEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="@string/converter_no_files"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/converterFiles"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingBottom="8dp" />
+
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/converterProgress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:indeterminate="true"
+        android:visibility="gone"
+        app:trackCornerRadius="3dp"
+        app:trackThickness="5dp" />
+
+    <TextView
+        android:id="@+id/converterStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:text="Converting…" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/convertButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginBottom="12dp"
+        android:enabled="false"
+        android:text="@string/converter_convert"
+        android:textSize="15sp"
+        app:cornerRadius="18dp"
+        app:icon="@drawable/ic_nav_downloader"
+        app:iconGravity="textStart"
+        app:iconPadding="10dp" />
+
+</LinearLayout>

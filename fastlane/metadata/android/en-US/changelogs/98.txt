@@ -1,0 +1,6 @@
+Vimo 33.25
+
+- New Converter screen, reached from the Library: pick a downloaded file, choose
+  a bitrate, and the bundled ffmpeg writes an MP3 next to your other audio.
+- Opening a video no longer waits on a blocking database read, so the player
+  appears without that hitch.
