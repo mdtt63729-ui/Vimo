@@ -1,0 +1,6 @@
+Vimo 33.18
+
+- The floating navigation bar is rebuilt: the selected label is no longer cut
+  off ("Downloader" instead of "Do"), the icons are evenly spaced, and the
+  pill sits properly inside the bar.
+- Switching tabs now glides with a single smooth spring instead of jumping.
