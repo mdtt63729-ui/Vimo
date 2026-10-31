@@ -1,0 +1,4 @@
+Vimo 33.47
+
+- The Telegram sheet carries the channel's real logo, and its contents fade up one
+  after another as the sheet rises, so nothing pops into place.

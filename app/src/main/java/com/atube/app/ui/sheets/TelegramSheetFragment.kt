@@ -41,6 +41,8 @@ class TelegramSheetFragment : BottomSheetDialogFragment() {
             behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
         }
 
+        playEntrance()
+
         binding.joinButton.setOnClickListener {
             runCatching {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(TELEGRAM_URL)))
@@ -53,6 +55,34 @@ class TelegramSheetFragment : BottomSheetDialogFragment() {
             // The app stays locked until the channel is joined, so this does not
             // close the sheet - it just says why.
             Toast.makeText(requireContext(), R.string.tg_must_join, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * The sheet rises on its own; this fades its contents in behind that movement so
+     * nothing pops: the logo and names first, then the description, then the buttons.
+     */
+    private fun playEntrance() {
+        val density = resources.displayMetrics.density
+        val blocks = listOf(
+            binding.channelLogo to 0L,
+            binding.channelName to 40L,
+            binding.channelLink to 70L,
+            binding.root.getChildAt(2) to 130L,
+            binding.joinButton to 190L,
+            binding.laterButton to 240L
+        )
+        blocks.forEach { (view, delay) ->
+            view.animate().cancel()
+            view.alpha = 0f
+            view.translationY = 12f * density
+            view.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(delay)
+                .setDuration(300L)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
         }
     }
 
