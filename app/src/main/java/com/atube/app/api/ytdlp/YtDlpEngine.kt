@@ -144,16 +144,22 @@ object YtDlpEngine {
      * Blocks until the download finishes. A Tube's own downloader is used for
      * normal downloads; this exists for links only yt-dlp understands.
      */
-    fun startDownload(url: String, selector: String, outputDir: File, jobId: String): Boolean {
-        val context = appContext ?: return false
-        if (!ensureStarted(context)) return false
+    /**
+     * Blocks until the download finishes. Returns the path of the file yt-dlp wrote,
+     * or null when the download failed.
+     */
+    fun startDownload(url: String, selector: String, outputDir: File, jobId: String): String? {
+        val context = appContext ?: return null
+        if (!ensureStarted(context)) return null
         runCatching { outputDir.mkdirs() }
         return runCatching {
             val raw = bridge(context)
                 .callAttr("start_download", url, selector, outputDir.absolutePath, jobId)
                 .toString()
-            JSONObject(raw).optBoolean("ok")
-        }.getOrDefault(false)
+            val json = JSONObject(raw)
+            if (!json.optBoolean("ok")) null
+            else json.optString("path").takeIf { it.isNotBlank() } ?: ""
+        }.getOrNull()
     }
 
     /**

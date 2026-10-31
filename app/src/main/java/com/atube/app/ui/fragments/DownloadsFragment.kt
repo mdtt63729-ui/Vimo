@@ -82,6 +82,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.io.path.fileSize
+import java.io.File
 import java.nio.file.Path
 import kotlin.math.roundToInt
 
@@ -406,9 +407,11 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                 }
             }
 
-            val ok = withContext(Dispatchers.IO) {
+            // null = failed, "" = succeeded but the engine did not name the file,
+            // otherwise the exact path yt-dlp wrote.
+            val produced: String? = withContext(Dispatchers.IO) {
                 if (format.convertToMp3) {
-                    YtDlpEngine.startAudioDownload(format.pageUrl, directory.toFile(), jobId)
+                    if (YtDlpEngine.startAudioDownload(format.pageUrl, directory.toFile(), jobId)) "" else null
                 } else if (format.formatId == "direct") {
                     // Pinterest hands back the media URL itself, not a page to extract
                     YtDlpEngine.startDownload(
@@ -422,8 +425,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             }
             poller.cancel()
 
-            if (ok) registerDownloadedFile(jobId, format, directory)
-            finishRow(jobId, ok)
+            if (produced != null) registerDownloadedFile(jobId, format, directory, produced)
+            finishRow(jobId, produced != null)
         }
     }
 
@@ -486,10 +489,20 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     private suspend fun registerDownloadedFile(
         jobId: String,
         format: YtDlpResult.Format,
-        directory: Path
+        directory: Path,
+        producedPath: String
     ) {
+        // Use the file the engine named. Falling back to "newest file in the folder"
+        // picked the wrong file whenever more than one download was in flight - the
+        // wrong file then failed to play and looked like it was never saved.
         val file = withContext(Dispatchers.IO) {
-            directory.toFile().listFiles()?.maxByOrNull { it.lastModified() }
+            val named = producedPath.takeIf { it.isNotBlank() }?.let { File(it) }
+            when {
+                named != null && named.exists() -> named
+                else -> directory.toFile().listFiles()
+                    ?.filter { it.isFile && !it.name.endsWith(".part") }
+                    ?.maxByOrNull { it.lastModified() }
+            }
         } ?: return
 
         val videoId = "$YTDLP_ID_PREFIX$jobId"

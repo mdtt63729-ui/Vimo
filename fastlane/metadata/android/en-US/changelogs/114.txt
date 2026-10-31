@@ -1,0 +1,6 @@
+Vimo 33.41
+
+- Downloads now register the exact file yt-dlp wrote, instead of guessing the
+  newest file in the folder. That guess picked the wrong file when more than one
+  download was running, which is why some downloads never appeared properly and
+  played back with "Source error".

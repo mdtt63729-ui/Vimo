@@ -273,18 +273,29 @@ def start_download(url, format_selector, output_dir, job_id):
     _write_progress(job_id, {"status": "starting", "percent": 0, "message": "Starting download"})
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
-            code = ydl.download([url])
+            info = ydl.extract_info(url, download=True)
         if job_id in _cancelled:
             _write_progress(job_id, {"status": "cancelled", "message": "Cancelled"})
             return json.dumps({"ok": False, "error": "Cancelled"})
-        if code == 0:
+        if info:
             _write_progress(job_id, {
                 "status": "finished",
                 "percent": 100,
                 "message": "Download complete",
                 "files": sorted(os.listdir(output_dir)),
             })
-            return json.dumps({"ok": True})
+            # The caller needs the file yt-dlp actually wrote, not the newest one in
+            # the folder: with several downloads in flight, guessing picked the wrong
+            # file, which then failed to play and never showed up correctly.
+            produced = None
+            try:
+                requested = info.get("requested_downloads") or []
+                if requested:
+                    produced = requested[0].get("filepath")
+                produced = produced or info.get("filepath") or info.get("_filename")
+            except Exception:
+                produced = None
+            return json.dumps({"ok": True, "path": produced})
         _write_progress(job_id, {"status": "error", "message": "The download did not complete"})
         return json.dumps({"ok": False, "error": "The download did not complete."})
     except Exception as e:
