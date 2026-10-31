@@ -15,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.MarginLayoutParams
 import android.view.inputmethod.EditorInfo
+import android.widget.TextView
 import android.widget.Toast
 import com.atube.app.helpers.ImageHelper
 import android.view.Gravity
@@ -816,7 +817,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                 )
                 setTextColor(
                     if (format == selectedFormat) Color.WHITE
-                    else ContextCompat.getColor(context, R.color.dl_ink)
+                    else ContextCompat.getColor(requireContext(), R.color.dl_ink)
                 )
                 setOnClickListener {
                     selectedFormat = format
