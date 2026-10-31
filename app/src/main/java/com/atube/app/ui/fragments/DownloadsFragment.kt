@@ -506,11 +506,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             dao.insertDownload(
                 Download(
                     videoId = videoId,
-                    title = currentTitle.ifBlank { file.nameWithoutExtension },
-                    // without a date the list rendered "56 years ago"
-                    uploadDate = kotlinx.datetime.Clock.System.todayIn(
-                        kotlinx.datetime.TimeZone.currentSystemDefault()
-                    )
+                    title = currentTitle.ifBlank { file.nameWithoutExtension }
                 )
             )
             dao.insertDownloadItem(
