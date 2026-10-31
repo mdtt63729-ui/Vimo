@@ -1,0 +1,5 @@
+Vimo 33.31
+
+- Fixed the navigation bar: its labels were being cut off at the bottom because
+  the bar centred its content in the full height while the navigation-bar inset
+  was applied as padding, and children are clipped to the padding box.

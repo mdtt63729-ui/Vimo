@@ -241,9 +241,19 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
         return widths
     }
 
+    /** Top of the 56dp content row, centred inside the padding box. */
+    private fun slotTop(): Float {
+        val available = (height - paddingTop - paddingBottom).coerceAtLeast(innerHeight)
+        return paddingTop + (available - innerHeight) / 2f
+    }
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
-        val height = resolveSize(barHeight, heightMeasureSpec)
+        // The bar is handed a bottom padding equal to the navigation-bar inset plus
+        // a small gap, and ViewGroup clips its children to the padding box. The
+        // measured height has to include that padding, otherwise the content is
+        // centred in the full height and the label row is cut off at the bottom.
+        val height = resolveSize(barHeight + paddingTop + paddingBottom, heightMeasureSpec)
         setMeasuredDimension(resolveSize(width, widthMeasureSpec), height)
 
         val widths = slotWidths(contentWidthOf(width))
@@ -258,7 +268,7 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
         val widths = slotWidths(contentWidthOf(width))
         var x = outerInset
-        val top = (height - innerHeight) / 2
+        val top = slotTop().toInt()
         itemViews.forEachIndexed { i, child ->
             val left = x.roundToInt()
             val w = widths[i].roundToInt()
@@ -289,7 +299,7 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
         val centreX = centres[lower] + (centres[upper] - centres[lower]) * fraction
 
         // vertical: the pill hugs the icon, not the whole slot
-        val slotTop = (height - innerHeight) / 2f
+        val slotTop = slotTop()
         val contentTop = slotTop + (innerHeight - contentHeight) / 2f
         val iconCentreY = contentTop + iconSize / 2f
         val pillTop = iconCentreY - pillHeight / 2f
