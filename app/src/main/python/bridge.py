@@ -289,6 +289,61 @@ def start_download(url, format_selector, output_dir, job_id):
         return json.dumps({"ok": False, "error": "Cancelled" if cancelled else str(e)[:400]})
 
 
+def start_audio_download(url, output_dir, job_id):
+    """Download the audio track and convert it to MP3 with the bundled ffmpeg.
+
+    Blocks until finished, so call it on a background thread. Progress is read
+    with get_progress(job_id), exactly like start_download.
+    """
+    job_id = str(job_id)
+    os.makedirs(output_dir, exist_ok=True)
+    output_template = os.path.join(output_dir, "%(title).120B_%(id)s.%(ext)s")
+    opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "format": "bestaudio/best",
+        "outtmpl": output_template,
+        "progress_hooks": [_progress_hook(job_id)],
+        "retries": 10,
+        "fragment_retries": 10,
+        "socket_timeout": 20,
+        "windowsfilenames": True,
+        "continuedl": True,
+        "overwrites": False,
+        "postprocessors": [{
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": "mp3",
+            "preferredquality": "192",
+        }],
+    }
+    opts.update(_ffmpeg_opts())
+    _write_progress(job_id, {"status": "starting", "percent": 0, "message": "Preparing audio"})
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            code = ydl.download([url])
+        if job_id in _cancelled:
+            _write_progress(job_id, {"status": "cancelled", "message": "Cancelled"})
+            return json.dumps({"ok": False, "error": "Cancelled"})
+        if code == 0:
+            _write_progress(job_id, {
+                "status": "finished",
+                "percent": 100,
+                "message": "Download complete",
+                "files": sorted(os.listdir(output_dir)),
+            })
+            return json.dumps({"ok": True})
+        _write_progress(job_id, {"status": "error", "message": "The conversion did not complete"})
+        return json.dumps({"ok": False, "error": "The conversion did not complete."})
+    except Exception as e:
+        cancelled = job_id in _cancelled
+        _write_progress(job_id, {
+            "status": "cancelled" if cancelled else "error",
+            "message": "Cancelled" if cancelled else str(e)[:400],
+        })
+        return json.dumps({"ok": False, "error": "Cancelled" if cancelled else str(e)[:400]})
+
+
 def cancel_job(job_id):
     _cancelled.add(str(job_id))
     return True

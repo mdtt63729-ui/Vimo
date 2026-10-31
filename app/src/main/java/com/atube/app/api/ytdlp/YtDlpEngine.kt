@@ -156,6 +156,22 @@ object YtDlpEngine {
         }.getOrDefault(false)
     }
 
+    /**
+     * Downloads the audio track and converts it to MP3 with the bundled ffmpeg.
+     * Blocks until finished, so call it off the main thread.
+     */
+    fun startAudioDownload(url: String, outputDir: File, jobId: String): Boolean {
+        val context = appContext ?: return false
+        if (!ensureStarted(context)) return false
+        runCatching { outputDir.mkdirs() }
+        return runCatching {
+            val raw = bridge(context)
+                .callAttr("start_audio_download", url, outputDir.absolutePath, jobId)
+                .toString()
+            JSONObject(raw).optBoolean("ok")
+        }.getOrDefault(false)
+    }
+
     fun cancel(jobId: String) {
         val context = appContext ?: return
         if (!started) return

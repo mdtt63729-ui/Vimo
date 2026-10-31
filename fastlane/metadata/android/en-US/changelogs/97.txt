@@ -1,0 +1,8 @@
+Vimo 33.24
+
+- ffmpeg is now bundled, so separate video and audio streams can be merged and
+  audio can be written as MP3.
+- The fetch screen has an "Audio · MP3" row that downloads the audio track and
+  converts it to a 192 kbps MP3.
+- Finished yt-dlp downloads are registered in the app's download database, so
+  tapping one plays it in Vimo's own player and it shows in the Library list.

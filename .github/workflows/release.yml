@@ -27,6 +27,10 @@ on:
 permissions:
   contents: write
 
+env:
+  FFMPEG_VERSION: "n7.1.1"
+  NDK_VERSION: "27.0.12077973"
+
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -64,6 +68,37 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "code=$VCODE" >> "$GITHUB_OUTPUT"
           echo "Vimo $VERSION (versionCode $VCODE)"
+
+      # yt-dlp needs a real ffmpeg executable to merge separate video and audio
+      # streams and to write MP3. It ships as libffmpeg.so so Android extracts it
+      # somewhere the app is allowed to execute it.
+      - name: Cache the NDK and the FFmpeg source
+        uses: actions/cache@v4
+        with:
+          path: |
+            /tmp/ndk.zip
+            /tmp/ffsrc
+          key: ffmpeg-${{ env.FFMPEG_VERSION }}-ndk-${{ env.NDK_VERSION }}
+
+      - name: Build FFmpeg for Android arm64
+        run: |
+          set -euo pipefail
+          if [ ! -f /tmp/ndk.zip ]; then
+            curl -sL -o /tmp/ndk.zip "https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip"
+          fi
+          rm -rf /tmp/ndk && mkdir -p /tmp/ndk
+          unzip -q /tmp/ndk.zip -d /tmp/ndk
+          if [ ! -d "/tmp/ffsrc/FFmpeg-${FFMPEG_VERSION}" ]; then
+            mkdir -p /tmp/ffsrc
+            curl -sL -o /tmp/ff.tar.gz "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/${FFMPEG_VERSION}.tar.gz"
+            tar -xzf /tmp/ff.tar.gz -C /tmp/ffsrc
+          fi
+          NDK_DIR="/tmp/ndk/android-ndk-${NDK_VERSION}" \
+          FFMPEG_SRC="/tmp/ffsrc/FFmpeg-${FFMPEG_VERSION}" \
+            bash scripts/build-ffmpeg-android.sh
+          mkdir -p app/src/main/jniLibs/arm64-v8a
+          cp "/tmp/ffsrc/FFmpeg-${FFMPEG_VERSION}/ffmpeg" app/src/main/jniLibs/arm64-v8a/libffmpeg.so
+          ls -la app/src/main/jniLibs/arm64-v8a/
 
       - name: Build APK
         run: |

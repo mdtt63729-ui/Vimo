@@ -37,6 +37,8 @@ import com.atube.app.constants.IntentData
 import com.atube.app.constants.PreferenceKeys
 import com.atube.app.databinding.FragmentDownloadContentBinding
 import com.atube.app.databinding.ItemYtdlpDownloadBinding
+import com.atube.app.db.obj.DownloadItem
+import com.atube.app.enums.FileType
 import com.atube.app.databinding.FragmentDownloadsBinding
 import com.atube.app.db.DatabaseHolder.Database
 import com.atube.app.db.obj.Download
@@ -80,6 +82,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.io.path.fileSize
+import java.nio.file.Path
 import kotlin.math.roundToInt
 
 enum class DownloadTab {
@@ -117,6 +120,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     private var fetchJob: Job? = null
 
     private val downloadRows = mutableMapOf<String, ItemYtdlpDownloadBinding>()
+    /** jobId -> videoId of the row registered in the download database. */
+    private val downloadedIds = mutableMapOf<String, String>()
     private val downloadJobs = mutableMapOf<String, Job>()
     private var currentTitle = ""
 
@@ -258,6 +263,19 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             isAudio = false
         )
 
+        // MP3 needs ffmpeg's encoder, so it is only offered when it is bundled
+        if (canMerge) {
+            out += YtDlpResult.Format(
+                label = getString(R.string.fetch_audio_mp3),
+                detail = getString(R.string.fetch_audio_mp3_detail),
+                directUrl = "",
+                formatId = "mp3",
+                pageUrl = pageUrl,
+                isAudio = true,
+                convertToMp3 = true
+            )
+        }
+
         for (i in 0 until formats.length()) {
             val format = formats.optJSONObject(i) ?: continue
             val direct = format.optString("url")
@@ -351,11 +369,17 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             }
 
             val ok = withContext(Dispatchers.IO) {
-                YtDlpEngine.startDownload(
-                    format.pageUrl, format.formatId, directory.toFile(), jobId
-                )
+                if (format.convertToMp3) {
+                    YtDlpEngine.startAudioDownload(format.pageUrl, directory.toFile(), jobId)
+                } else {
+                    YtDlpEngine.startDownload(
+                        format.pageUrl, format.formatId, directory.toFile(), jobId
+                    )
+                }
             }
             poller.cancel()
+
+            if (ok) registerDownloadedFile(jobId, format, directory)
             finishRow(jobId, ok)
         }
     }
@@ -398,9 +422,55 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         YtDlpEngine.cleanup(jobId)
         downloadJobs.remove(jobId)
 
-        if (ok) {
+        val videoId = downloadedIds[jobId]
+        if (ok && videoId != null) {
+            row.downloadStatus.text = getString(R.string.fetch_saved)
+            row.root.setOnClickListener {
+                NavigationHelper.navigateVideo(
+                    requireContext(),
+                    PlayerData(videoId = videoId, isOffline = true)
+                )
+            }
             Snackbar.make(binding.root, R.string.fetch_saved, Snackbar.LENGTH_SHORT).show()
         }
+    }
+
+    /**
+     * Puts the finished file into the app's download database, so it plays in the
+     * normal player and shows up in the Library's Downloads list. The id is
+     * prefixed so it can never collide with a real YouTube id.
+     */
+    private suspend fun registerDownloadedFile(
+        jobId: String,
+        format: YtDlpResult.Format,
+        directory: Path
+    ) {
+        val file = withContext(Dispatchers.IO) {
+            directory.toFile().listFiles()?.maxByOrNull { it.lastModified() }
+        } ?: return
+
+        val videoId = "ytdlp_$jobId"
+        val dao = Database.downloadDao()
+
+        withContext(Dispatchers.IO) {
+            dao.insertDownload(
+                Download(
+                    videoId = videoId,
+                    title = currentTitle.ifBlank { file.nameWithoutExtension }
+                )
+            )
+            dao.insertDownloadItem(
+                DownloadItem(
+                    type = if (format.isAudio) FileType.AUDIO else FileType.VIDEO,
+                    videoId = videoId,
+                    fileName = file.name,
+                    path = file.toPath(),
+                    format = file.extension,
+                    downloadSize = file.length()
+                )
+            )
+        }
+        downloadedIds[jobId] = videoId
     }
 
     private fun cancelDownload(jobId: String) {

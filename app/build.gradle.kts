@@ -40,8 +40,8 @@ android {
         applicationId = "aos.vimo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 96
-        versionName = "33.23"
+        versionCode = 97
+        versionName = "33.24"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resValue("string", "app_name", "Vimo")
 
@@ -60,6 +60,15 @@ android {
 
     viewBinding {
         enable = true
+    }
+
+    packaging {
+        // The bundled ffmpeg ships as libffmpeg.so. Legacy packaging extracts
+        // native libraries into the app's library directory, which is the only
+        // place an app is allowed to execute its own binaries.
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 
     signingConfigs {

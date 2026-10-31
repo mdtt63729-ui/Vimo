@@ -33,7 +33,9 @@ sealed class YtDlpResult {
         val formatId: String,
         /** The page the format came from. */
         val pageUrl: String,
-        val isAudio: Boolean
+        val isAudio: Boolean,
+        /** true when this row downloads the audio track and converts it to MP3. */
+        val convertToMp3: Boolean = false
     ) : YtDlpResult()
 }
 

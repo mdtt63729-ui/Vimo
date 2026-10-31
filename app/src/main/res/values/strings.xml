@@ -634,4 +634,7 @@
 
     <string name="fetch_best_single">Best available</string>
     <string name="fetch_best_single_detail">Single file · video + audio already combined</string>
+
+    <string name="fetch_audio_mp3">Audio · MP3</string>
+    <string name="fetch_audio_mp3_detail">192 kbps · converted with ffmpeg</string>
 </resources>
