@@ -779,7 +779,38 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
 
         audioMode = false
         renderMode()
-        binding.previewSection.isVisible = true
+        revealPreview()
+    }
+
+    /**
+     * The fetched result fades in block by block instead of appearing in one jump:
+     * thumbnail, then title, then the mode switch, the qualities and the button.
+     */
+    private fun revealPreview() {
+        val section = binding.previewSection
+        section.isVisible = true
+
+        val density = resources.displayMetrics.density
+        val blocks = listOfNotNull(
+            binding.previewThumbnail,
+            binding.previewTitle,
+            binding.previewDescription,
+            binding.videoMode.parent as? View,
+            binding.qualityContainer.parent as? View,
+            binding.downloadButton
+        )
+        blocks.forEachIndexed { index, block ->
+            block.animate().cancel()
+            block.alpha = 0f
+            block.translationY = 16f * density
+            block.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(index * 45L)
+                .setDuration(280L)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
+        }
     }
 
     private fun renderMode() {

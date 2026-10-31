@@ -1,0 +1,4 @@
+Vimo 33.45
+
+- A successful fetch fades in: the thumbnail, title, mode switch, qualities and
+  Download button arrive one after another instead of appearing in one jump.
