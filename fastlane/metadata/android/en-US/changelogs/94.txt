@@ -1,0 +1,6 @@
+Vimo 33.21
+
+- The Downloader tab is now a fetch screen: paste a link, press Fetch, and the
+  on-device yt-dlp engine reads it and lists every format it can see.
+- Type words instead of a link and it searches; tap a result to load that
+  video's formats, tap a format to copy its direct stream URL.

@@ -609,4 +609,15 @@
     <string name="low_network_title">Low network quality</string>
     <string name="low_network_message">Your network quality is very low. Please check your connection.</string>
 
+
+    <string name="fetch_hint">Paste a link or type to search</string>
+    <string name="fetch">Fetch</string>
+    <string name="fetch_empty_title">Nothing fetched yet</string>
+    <string name="fetch_empty_message">Paste a link from YouTube, Instagram, TikTok or anywhere yt-dlp can read, then press Fetch. Typing words searches instead.</string>
+    <string name="fetch_copy">Copy</string>
+    <string name="fetch_need_input">Paste a link or type something first</string>
+    <string name="fetch_no_results">Nothing came back for that</string>
+    <string name="fetch_failed">That link could not be read</string>
+    <string name="fetch_clipboard_empty">Clipboard is empty</string>
+    <string name="fetch_copied">Direct link copied</string>
 </resources>

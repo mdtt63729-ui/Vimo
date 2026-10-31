@@ -6,10 +6,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.os.Bundle
 import android.os.IBinder
 import android.view.View
 import android.view.ViewGroup.MarginLayoutParams
+import android.view.inputmethod.EditorInfo
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
@@ -26,6 +29,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.atube.app.R
+import com.atube.app.api.ytdlp.YtDlpEngine
 import com.atube.app.constants.IntentData
 import com.atube.app.constants.PreferenceKeys
 import com.atube.app.databinding.FragmentDownloadContentBinding
@@ -48,6 +52,8 @@ import com.atube.app.parcelable.PlayerData
 import com.atube.app.receivers.DownloadReceiver
 import com.atube.app.services.DownloadService
 import com.atube.app.ui.adapters.DownloadPlaylistAdapter
+import com.atube.app.ui.adapters.YtDlpFetchAdapter
+import com.atube.app.ui.adapters.YtDlpResult
 import com.atube.app.ui.adapters.DownloadsAdapter
 import com.atube.app.ui.base.DynamicLayoutManagerFragment
 import com.atube.app.ui.extensions.setOnBackPressed
@@ -56,12 +62,16 @@ import com.atube.app.ui.models.DownloadsViewModel
 import com.atube.app.ui.sheets.BaseBottomSheet
 import com.atube.app.ui.viewholders.DownloadsViewHolder
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayoutMediator
+import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlin.io.path.fileSize
 
 enum class DownloadTab {
@@ -79,33 +89,224 @@ enum class DownloadSortingOrder(@StringRes val stringId: Int) {
     SIZE(R.string.sort_size)
 }
 
+/**
+ * The Downloader tab.
+ *
+ * A link box, a Fetch button and the result. Everything the old screen held - the
+ * three tabs of already-downloaded files - is gone: this screen exists to take a
+ * link, hand it to the on-device yt-dlp engine and show what came back.
+ *
+ * A link is read with extract_info(), which returns the video plus every format
+ * yt-dlp could see; anything that is not a link is treated as a search and runs
+ * through yt-dlp's ytsearch pseudo-extractor. Tapping a search hit loads that
+ * video's formats, tapping a format copies its direct stream URL.
+ */
 class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     private var _binding: FragmentDownloadsBinding? = null
     private val binding get() = _binding!!
+
+    private lateinit var adapter: YtDlpFetchAdapter
+    private var fetchJob: Job? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         _binding = FragmentDownloadsBinding.bind(view)
         super.onViewCreated(view, savedInstanceState)
 
-        binding.downloadsPager.adapter = DownloadsFragmentAdapter(this)
+        adapter = YtDlpFetchAdapter(
+            onVideoClick = { video -> if (video.url.isNotBlank()) fetchLink(video.url) },
+            onFormatClick = { format -> copyStreamUrl(format.url) }
+        )
+        binding.fetchResults.layoutManager = LinearLayoutManager(requireContext())
+        binding.fetchResults.adapter = adapter
 
-        TabLayoutMediator(binding.tabLayout, binding.downloadsPager) { tab, position ->
-            tab.text = when (position) {
-                DownloadTab.VIDEO.ordinal -> getString(R.string.video)
-                DownloadTab.AUDIO.ordinal -> getString(R.string.audio)
-                DownloadTab.PLAYLIST.ordinal -> getString(R.string.playlists)
-                else -> throw IllegalArgumentException()
+        binding.fetchButton.setOnClickListener { startFetch() }
+        binding.linkInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_GO) {
+                startFetch()
+                true
+            } else {
+                false
             }
-        }.attach()
+        }
+        binding.linkInputLayout.setEndIconOnClickListener { pasteFromClipboard() }
+
+        showEmpty(getString(R.string.fetch_empty_message))
     }
 
-    fun bindDownloadService() {
-        childFragmentManager.fragments.filterIsInstance<DownloadsFragmentPage>().forEach {
-            it.bindDownloadService()
+    /**
+     * Kept because MainActivity still calls it while wiring the download service.
+     * This screen no longer hosts the downloaded-file lists, so there is nothing
+     * left to bind.
+     */
+    fun bindDownloadService() = Unit
+
+    private fun startFetch() {
+        val input = binding.linkInput.text?.toString()?.trim().orEmpty()
+        if (input.isEmpty()) {
+            binding.linkInputLayout.error = getString(R.string.fetch_need_input)
+            return
+        }
+        binding.linkInputLayout.error = null
+
+        if (input.startsWith("http://") || input.startsWith("https://")) {
+            fetchLink(input)
+        } else {
+            runSearch(input)
         }
     }
 
+    private fun fetchLink(url: String) {
+        runFetch {
+            val json = YtDlpEngine.extractInfo(url)
+            if (!json.optBoolean("ok")) {
+                throw IllegalStateException(
+                    json.optString("error").ifBlank { getString(R.string.fetch_failed) }
+                )
+            }
+            itemsFromInfo(json)
+        }
+    }
+
+    private fun runSearch(query: String) {
+        runFetch {
+            val json = YtDlpEngine.search(query, 20)
+            if (!json.optBoolean("ok")) {
+                throw IllegalStateException(
+                    json.optString("error").ifBlank { getString(R.string.fetch_failed) }
+                )
+            }
+            itemsFromSearch(json)
+        }
+    }
+
+    /**
+     * Runs the blocking yt-dlp call off the main thread and paints whichever of
+     * the three states the result belongs to.
+     */
+    private fun runFetch(block: () -> List<YtDlpResult>) {
+        fetchJob?.cancel()
+        showLoading()
+
+        fetchJob = viewLifecycleOwner.lifecycleScope.launch {
+            val outcome = withContext(Dispatchers.IO) { runCatching { block() } }
+            if (_binding == null) return@launch
+
+            outcome.onSuccess { items ->
+                if (items.isEmpty()) {
+                    showEmpty(getString(R.string.fetch_no_results))
+                } else {
+                    adapter.submitList(items)
+                    showResults()
+                }
+            }.onFailure { error ->
+                showEmpty(error.message ?: getString(R.string.fetch_failed))
+            }
+        }
+    }
+
+    private fun itemsFromInfo(json: JSONObject): List<YtDlpResult> {
+        val out = mutableListOf<YtDlpResult>()
+        out += YtDlpResult.Video(
+            id = json.optString("id"),
+            title = json.optString("title").ifBlank { "Untitled" },
+            uploader = json.optString("uploader"),
+            duration = json.optLong("duration"),
+            thumbnail = json.optString("thumbnail"),
+            views = 0L,
+            url = json.optString("webpage_url")
+        )
+
+        val formats = json.optJSONArray("formats") ?: JSONArray()
+        for (i in 0 until formats.length()) {
+            val format = formats.optJSONObject(i) ?: continue
+            val url = format.optString("url")
+            if (url.isBlank()) continue
+
+            val ext = format.optString("ext").ifBlank { "file" }
+            val resolution = format.optString("resolution").ifBlank { "unknown" }
+            val hasVideo = format.optBoolean("has_video")
+            val hasAudio = format.optBoolean("has_audio")
+
+            val label = if (hasVideo) "$resolution · $ext" else "Audio · $ext"
+            val kind = when {
+                hasVideo && hasAudio -> "Video + audio"
+                hasVideo -> "Video only"
+                else -> "Audio only"
+            }
+            val size = YtDlpFetchAdapter.formatSize(format.optLong("filesize"))
+            val detail = listOf(kind, size).filter { it.isNotBlank() }.joinToString(" · ")
+
+            out += YtDlpResult.Format(label = label, detail = detail, url = url)
+        }
+        return out
+    }
+
+    private fun itemsFromSearch(json: JSONObject): List<YtDlpResult> {
+        val items = json.optJSONArray("items") ?: JSONArray()
+        val out = mutableListOf<YtDlpResult>()
+        for (i in 0 until items.length()) {
+            val entry = items.optJSONObject(i) ?: continue
+            val id = entry.optString("id")
+            out += YtDlpResult.Video(
+                id = id,
+                title = entry.optString("title").ifBlank { "Untitled" },
+                uploader = entry.optString("uploader"),
+                duration = entry.optLong("duration"),
+                thumbnail = entry.optString("thumbnail"),
+                views = entry.optLong("views"),
+                url = if (id.isNotBlank()) "https://www.youtube.com/watch?v=$id" else ""
+            )
+        }
+        return out
+    }
+
+    private fun pasteFromClipboard() {
+        val clipboard = requireContext()
+            .getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val text = clipboard?.primaryClip
+            ?.takeIf { it.itemCount > 0 }
+            ?.getItemAt(0)
+            ?.text
+            ?.toString()
+            ?.trim()
+
+        if (text.isNullOrBlank()) {
+            Snackbar.make(binding.root, R.string.fetch_clipboard_empty, Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        binding.linkInput.setText(text)
+        binding.linkInput.setSelection(text.length)
+    }
+
+    private fun copyStreamUrl(url: String) {
+        val clipboard = requireContext()
+            .getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        clipboard?.setPrimaryClip(ClipData.newPlainText("Vimo stream", url))
+        Snackbar.make(binding.root, R.string.fetch_copied, Snackbar.LENGTH_SHORT).show()
+    }
+
+    private fun showLoading() {
+        binding.fetchProgress.isVisible = true
+        binding.fetchEmpty.isVisible = false
+        binding.fetchResults.isVisible = false
+    }
+
+    private fun showResults() {
+        binding.fetchProgress.isVisible = false
+        binding.fetchEmpty.isVisible = false
+        binding.fetchResults.isVisible = true
+    }
+
+    private fun showEmpty(message: String) {
+        binding.fetchProgress.isVisible = false
+        binding.fetchResults.isVisible = false
+        binding.fetchEmpty.isVisible = true
+        binding.fetchEmptyMessage.text = message
+    }
+
     override fun onDestroyView() {
+        fetchJob?.cancel()
+        fetchJob = null
         super.onDestroyView()
         _binding = null
     }
