@@ -1,0 +1,6 @@
+Vimo 33.37
+
+- Thumbnails are back to the largest size: 1280x720 first, with the smaller sizes
+  only as a fallback.
+- Every feed card has a three-dot button: Save to playlist, Download, Share,
+  Not interested, Don't recommend channel, Report.

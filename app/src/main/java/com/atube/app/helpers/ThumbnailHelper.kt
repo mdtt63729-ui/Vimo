@@ -28,9 +28,9 @@ object ThumbnailHelper {
      * after the one that is guaranteed to answer.
      */
     val QUALITY_FALLBACK_CHAIN = listOf(
-        "hqdefault",
-        "maxresdefault",
-        "sddefault",
+        "maxresdefault",   // 1280x720 - what the app asks for
+        "sddefault",       // 640x480  - HD uploads that lack maxres
+        "hqdefault",       // 480x360  - exists for every video
         "mqdefault",
         "default",
     )

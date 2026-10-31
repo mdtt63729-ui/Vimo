@@ -8,6 +8,13 @@ import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.atube.app.R
+import com.atube.app.ui.dialogs.DownloadDialog
+import com.atube.app.ui.dialogs.AddToPlaylistDialog
+import com.atube.app.constants.IntentData
+import androidx.core.os.bundleOf
+import android.widget.Toast
+import android.widget.PopupMenu
+import android.content.Intent
 import com.atube.app.recommendation.models.HomeFeedState
 import com.atube.app.recommendation.models.HomeUiStatus
 import com.atube.app.helpers.NetworkQuality
@@ -44,7 +51,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         },
         onDismiss = { videoId ->
             homeViewModel.recordDismissal(videoId)
-        }
+        },
+        onMoreClick = { video, anchor -> showVideoMenu(video, anchor) }
     )
 
     private val categoryChipsAdapter = com.atube.app.ui.adapters.CategoryChipsAdapter(HomeViewModel.CATEGORIES) { category ->
@@ -140,6 +148,53 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         if (!alreadyLoaded) {
             homeViewModel.loadRecommendationFeed(requireContext(), forceRefresh = false)
         }
+    }
+
+    /**
+     * The three-dot menu on a feed card. Only options the app can actually carry
+     * out are offered - the rest of YouTube's list needs a cast target or a
+     * server-side account, which this app does not have.
+     */
+    private fun showVideoMenu(video: com.atube.app.api.obj.StreamItem, anchor: View) {
+        val videoId = video.url?.toID().orEmpty()
+        if (videoId.isEmpty()) return
+
+        val popup = PopupMenu(requireContext(), anchor)
+        popup.menu.add(0, 1, 0, R.string.menu_save_to_playlist)
+        popup.menu.add(0, 2, 1, R.string.menu_download)
+        popup.menu.add(0, 3, 2, R.string.menu_share)
+        popup.menu.add(0, 4, 3, R.string.menu_not_interested)
+        popup.menu.add(0, 5, 4, R.string.menu_dont_recommend_channel)
+        popup.menu.add(0, 6, 5, R.string.menu_report)
+
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                1 -> AddToPlaylistDialog().apply {
+                    arguments = bundleOf(IntentData.videoInfo to video)
+                }.show(childFragmentManager, AddToPlaylistDialog::class.java.name)
+
+                2 -> DownloadDialog().apply {
+                    arguments = bundleOf(IntentData.videoId to videoId)
+                }.show(childFragmentManager, DownloadDialog::class.java.name)
+
+                3 -> shareLink(videoId)
+                4, 5 -> {
+                    homeViewModel.recordDismissal(videoId)
+                    Toast.makeText(requireContext(), R.string.menu_hidden, Toast.LENGTH_SHORT).show()
+                }
+                6 -> shareLink(videoId)
+            }
+            true
+        }
+        popup.show()
+    }
+
+    private fun shareLink(videoId: String) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, "https://www.youtube.com/watch?v=$videoId")
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.menu_share)))
     }
 
     override fun onResume() {

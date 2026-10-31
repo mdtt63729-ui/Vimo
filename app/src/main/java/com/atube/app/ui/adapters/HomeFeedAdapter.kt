@@ -33,7 +33,8 @@ import com.atube.app.recommendation.models.HomeFeedItem
  */
 class HomeFeedAdapter(
     private val onItemClick: (StreamItem) -> Unit = {},
-    private val onDismiss: (String) -> Unit = {}
+    private val onDismiss: (String) -> Unit = {},
+    private val onMoreClick: (StreamItem, android.view.View) -> Unit = { _, _ -> }
 ) : ListAdapter<HomeFeedItem, RecyclerView.ViewHolder>(FeedDiffCallback) {
 
     companion object {
@@ -178,6 +179,8 @@ class HomeFeedAdapter(
             } else {
                 channelImageContainer.visibility = android.view.View.GONE
             }
+
+            moreButton.setOnClickListener { anchor -> onMoreClick(video, anchor) }
 
             // Set up touch listener once in ViewHolder init, not here
             // The click handler is set here because it needs the video reference

@@ -653,4 +653,13 @@
     <string name="converter">Converter</string>
 
     <string name="fetch_working">Fetching…</string>
+
+    <string name="menu_more">More options</string>
+    <string name="menu_save_to_playlist">Save to playlist</string>
+    <string name="menu_download">Download</string>
+    <string name="menu_share">Share</string>
+    <string name="menu_not_interested">Not interested</string>
+    <string name="menu_dont_recommend_channel">Don\'t recommend channel</string>
+    <string name="menu_report">Report</string>
+    <string name="menu_hidden">Hidden from your feed</string>
 </resources>
