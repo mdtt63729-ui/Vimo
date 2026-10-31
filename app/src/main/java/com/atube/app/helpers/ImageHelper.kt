@@ -12,6 +12,7 @@ import android.widget.ImageView
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import coil3.ImageLoader
+import coil3.SingletonImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.load
@@ -74,6 +75,14 @@ object ImageHelper {
                 diskCache(diskCache)
             }
             .build()
+
+        // Every ImageView.load(...) in the app goes through Coil's singleton, and
+        // the singleton only reaches the network if a network fetcher has been
+        // registered with it. The loader above registers OkHttp by hand, so make it
+        // the singleton: without this, the loading path depends on the fetcher
+        // being discovered automatically, and when that does not happen every
+        // network image fails while the rest of the app keeps working.
+        SingletonImageLoader.setUnsafe(imageLoader)
     }
 
     /**

@@ -1,0 +1,5 @@
+Vimo 33.35
+
+- Fixed thumbnails never loading anywhere: the image loader that registers the
+  network fetcher is now installed as Coil's singleton, so every image request
+  in the app actually reaches the network.
