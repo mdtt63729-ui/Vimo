@@ -42,9 +42,6 @@ class DownloadsLibraryFragment : Fragment(R.layout.fragment_downloads_library) {
         childFragmentManager.fragments.filterIsInstance<DownloadsFragmentPage>().forEach {
             it.bindDownloadService()
         }
-        childFragmentManager.fragments.filterIsInstance<PlaylistDownloadsFragmentPage>().forEach {
-            it.bindDownloadService()
-        }
     }
 
     override fun onDestroyView() {
