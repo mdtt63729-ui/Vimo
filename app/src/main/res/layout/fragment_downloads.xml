@@ -1,212 +1,223 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?android:attr/colorBackground"
-    android:orientation="vertical"
-    android:paddingHorizontal="16dp"
-    android:paddingTop="12dp">
+    android:clipToPadding="false"
+    android:fillViewport="true"
+    android:paddingBottom="24dp">
 
-    <!-- Paste a link, press Fetch. Everything below it is the result. -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
-        app:cardCornerRadius="24dp"
-        app:cardElevation="0dp"
-        app:strokeWidth="0dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/linkInputLayout"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/fetch_hint"
-                app:boxCornerRadiusBottomEnd="16dp"
-                app:boxCornerRadiusBottomStart="16dp"
-                app:boxCornerRadiusTopEnd="16dp"
-                app:boxCornerRadiusTopStart="16dp"
-                app:endIconDrawable="@drawable/ic_paste"
-                app:endIconMode="custom"
-                app:endIconTint="?attr/colorOnSurfaceVariant">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/linkInput"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:imeOptions="actionGo"
-                    android:inputType="textUri"
-                    android:maxLines="1"
-                    android:textSize="15sp" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/fetchButton"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="12dp"
-                android:text="@string/fetch"
-                android:textSize="15sp"
-                app:cornerRadius="18dp"
-                app:icon="@drawable/ic_nav_downloader"
-                app:iconGravity="textStart"
-                app:iconPadding="10dp" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- What the fetch screen shows while yt-dlp is reading the link: the same
-         shimmering blocks the home feed and the player use, shaped like the
-         result that is about to arrive. -->
     <LinearLayout
-        android:id="@+id/fetchSkeleton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
         android:orientation="vertical"
-        android:visibility="gone">
+        android:paddingStart="20dp"
+        android:paddingTop="14dp"
+        android:paddingEnd="20dp">
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/dl_title"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="23sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:text="@string/dl_subtitle"
+            android:textColor="@color/dl_muted"
+            android:textSize="14sp" />
+
+        <!-- link field -->
         <LinearLayout
             android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_capsule"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="↗"
+                android:textColor="@color/dl_muted"
+                android:textSize="22sp" />
+
+            <EditText
+                android:id="@+id/linkInput"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:hint="@string/fetch_hint"
+                android:imeOptions="actionGo"
+                android:inputType="textUri"
+                android:singleLine="true"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textColorHint="@color/dl_muted"
+                android:textSize="14sp"
+                android:importantForAutofill="no" />
+
+            <TextView
+                android:id="@+id/pasteButton"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/dl_paste"
+                android:gravity="center"
+                android:text="▣"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textSize="20sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/fetchButton"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_capsule_selected"
+            android:gravity="center"
+            android:text="@string/dl_fetch"
+            android:textColor="@android:color/white"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <!-- loading -->
+        <LinearLayout
+            android:id="@+id/fetchSkeleton"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:layout_marginTop="18dp"
+            android:orientation="vertical"
+            android:visibility="gone">
 
             <View
                 android:id="@+id/skeletonThumb"
-                android:layout_width="132dp"
-                android:layout_height="74dp" />
+                android:layout_width="match_parent"
+                android:layout_height="120dp" />
 
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="74dp"
-                android:layout_marginStart="12dp"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center_vertical">
+            <View
+                android:id="@+id/skeletonLine1"
+                android:layout_width="match_parent"
+                android:layout_height="16dp"
+                android:layout_marginTop="12dp" />
 
-                <View
-                    android:id="@+id/skeletonLine1"
-                    android:layout_width="match_parent"
-                    android:layout_height="14dp" />
+            <View
+                android:id="@+id/skeletonLine2"
+                android:layout_width="200dp"
+                android:layout_height="12dp"
+                android:layout_marginTop="8dp" />
 
-                <View
-                    android:id="@+id/skeletonLine2"
-                    android:layout_width="180dp"
-                    android:layout_height="12dp"
-                    android:layout_marginTop="8dp" />
+            <View
+                android:id="@+id/skeletonLine3"
+                android:layout_width="140dp"
+                android:layout_height="12dp"
+                android:layout_marginTop="8dp" />
 
-                <View
-                    android:id="@+id/skeletonLine3"
-                    android:layout_width="110dp"
-                    android:layout_height="11dp"
-                    android:layout_marginTop="8dp" />
-            </LinearLayout>
+            <View
+                android:id="@+id/skeletonRow1"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="16dp" />
+
+            <View
+                android:id="@+id/skeletonRow2"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="8dp" />
+
+            <View
+                android:id="@+id/skeletonRow3"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="8dp" />
+
+            <View
+                android:id="@+id/skeletonRow4"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="8dp" />
         </LinearLayout>
 
-        <View
-            android:id="@+id/skeletonRow1"
-            android:layout_width="match_parent"
-            android:layout_height="16dp"
-            android:layout_marginTop="22dp" />
-
-        <View
-            android:id="@+id/skeletonRow2"
-            android:layout_width="match_parent"
-            android:layout_height="16dp"
-            android:layout_marginTop="14dp" />
-
-        <View
-            android:id="@+id/skeletonRow3"
-            android:layout_width="match_parent"
-            android:layout_height="16dp"
-            android:layout_marginTop="14dp" />
-
-        <View
-            android:id="@+id/skeletonRow4"
-            android:layout_width="match_parent"
-            android:layout_height="16dp"
-            android:layout_marginTop="14dp" />
-    </LinearLayout>
-
-    <!-- Finished and running downloads live here, right under the link card. -->
-    <LinearLayout
-        android:id="@+id/downloadsSection"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
-        android:orientation="vertical"
-        android:visibility="gone">
-
+        <!-- empty / error state -->
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/fetch_downloads"
-            android:textColor="?attr/colorOnSurface"
-            android:textSize="13sp"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:id="@+id/downloadsContainer"
+            android:id="@+id/fetchEmpty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:orientation="vertical" />
-    </LinearLayout>
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_capsule"
+            android:gravity="center"
+            android:padding="28dp"
+            android:text="@string/fetch_empty_message"
+            android:textColor="@color/dl_muted"
+            android:textSize="13sp" />
 
-    <LinearLayout
-        android:id="@+id/fetchEmpty"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:orientation="vertical">
-
-        <ImageView
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:alpha="0.45"
-            android:src="@drawable/ic_nav_downloader"
-            android:contentDescription="@null"
-            app:tint="?attr/colorOnSurfaceVariant" />
-
-        <TextView
-            android:layout_width="wrap_content"
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/fetchResults"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:gravity="center"
-            android:text="@string/fetch_empty_title"
-            android:textColor="?attr/colorOnSurface"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:nestedScrollingEnabled="false"
+            android:overScrollMode="never"
+            android:visibility="gone" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="22dp"
+            android:layout_marginBottom="20dp"
+            android:background="@color/dl_line" />
+
+        <!-- downloads -->
+        <LinearLayout
+            android:id="@+id/downloadsSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/fetch_downloads"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/downloadsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/fetchEmptyMessage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:gravity="center"
-            android:paddingHorizontal="24dp"
-            android:text="@string/fetch_empty_message"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="13sp" />
+            android:layout_marginTop="12dp"
+            android:textColor="@color/dl_muted"
+            android:textSize="12sp"
+            android:visibility="gone"
+            tools:text="status" />
+
     </LinearLayout>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/fetchResults"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:visibility="gone"
-        tools:visibility="gone" />
-
-</LinearLayout>
+</androidx.core.widget.NestedScrollView>

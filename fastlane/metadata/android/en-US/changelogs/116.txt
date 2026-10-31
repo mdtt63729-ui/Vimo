@@ -1,0 +1,6 @@
+Vimo 33.43
+
+- The Downloader screen uses the new premium layout: capsule link field with a
+  paste button, a dark Fetch button, skeleton loading and card-styled results.
+- Colours follow the supplied design (ink #171717, muted #737373, soft #F3F3F3,
+  line #E7E7E7), with no placeholder content.

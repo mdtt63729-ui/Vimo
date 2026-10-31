@@ -7,7 +7,7 @@
     android:layout_marginBottom="10dp"
     android:clickable="true"
     android:focusable="true"
-    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+    app:cardBackgroundColor="?android:attr/colorBackground"
     app:cardCornerRadius="20dp"
     app:cardElevation="0dp"
     app:strokeWidth="0dp">

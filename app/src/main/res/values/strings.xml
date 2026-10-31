@@ -667,4 +667,9 @@
     <string name="menu_play_last">Play last in queue</string>
     <string name="menu_queued_next">Will play next</string>
     <string name="menu_queued_last">Added to the end of the queue</string>
+
+    <string name="dl_title">Download anything</string>
+    <string name="dl_subtitle">Paste a video or audio link to get started.</string>
+    <string name="dl_paste">Paste URL</string>
+    <string name="dl_fetch">↓   Fetch media</string>
 </resources>

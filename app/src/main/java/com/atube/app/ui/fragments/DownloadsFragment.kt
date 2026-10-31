@@ -15,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.MarginLayoutParams
 import android.view.inputmethod.EditorInfo
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
@@ -150,7 +151,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                 false
             }
         }
-        binding.linkInputLayout.setEndIconOnClickListener { pasteFromClipboard() }
+        binding.pasteButton.setOnClickListener { pasteFromClipboard() }
 
         shimmerSkeleton()
         showEmpty(getString(R.string.fetch_empty_message))
@@ -171,10 +172,9 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     private fun startFetch() {
         val input = binding.linkInput.text?.toString()?.trim().orEmpty()
         if (input.isEmpty()) {
-            binding.linkInputLayout.error = getString(R.string.fetch_need_input)
+            Toast.makeText(requireContext(), R.string.fetch_need_input, Toast.LENGTH_SHORT).show()
             return
         }
-        binding.linkInputLayout.error = null
 
         if (input.startsWith("http://") || input.startsWith("https://")) {
             fetchLink(input)

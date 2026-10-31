@@ -423,4 +423,9 @@
     <color name="chip_bg_selected">#0F0F0F</color>
     <color name="chip_text">#0F0F0F</color>
     <color name="chip_text_selected">#FFFFFF</color>
+    <color name="dl_ink">#171717</color>
+    <color name="dl_muted">#737373</color>
+    <color name="dl_soft">#F3F3F3</color>
+    <color name="dl_line">#E7E7E7</color>
+    <color name="dl_danger">#B42318</color>
 </resources>
