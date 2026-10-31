@@ -29,7 +29,7 @@ permissions:
 
 env:
   FFMPEG_VERSION: "n7.1.1"
-  NDK_VERSION: "27.0.12077973"
+  NDK_VERSION: "r27c"
 
 concurrency:
   group: release-${{ github.ref }}
@@ -84,13 +84,13 @@ jobs:
         run: |
           set -euo pipefail
           if [ ! -f /tmp/ndk.zip ]; then
-            curl -sL -o /tmp/ndk.zip "https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip"
+            curl -fsSL -o /tmp/ndk.zip "https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip"
           fi
           rm -rf /tmp/ndk && mkdir -p /tmp/ndk
           unzip -q /tmp/ndk.zip -d /tmp/ndk
           if [ ! -d "/tmp/ffsrc/FFmpeg-${FFMPEG_VERSION}" ]; then
             mkdir -p /tmp/ffsrc
-            curl -sL -o /tmp/ff.tar.gz "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/${FFMPEG_VERSION}.tar.gz"
+            curl -fsSL -o /tmp/ff.tar.gz "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/${FFMPEG_VERSION}.tar.gz"
             tar -xzf /tmp/ff.tar.gz -C /tmp/ffsrc
           fi
           NDK_DIR="/tmp/ndk/android-ndk-${NDK_VERSION}" \
