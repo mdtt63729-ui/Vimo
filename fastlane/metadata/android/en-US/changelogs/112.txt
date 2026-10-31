@@ -1,0 +1,6 @@
+Vimo 33.39
+
+- The three-dot menu now has Play next in queue and Play last in queue, using the
+  app's existing playing queue.
+- Photos keep their own aspect ratio in fetch results instead of being forced
+  into a 16:9 box.

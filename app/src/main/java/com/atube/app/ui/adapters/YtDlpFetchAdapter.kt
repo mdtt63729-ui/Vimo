@@ -95,7 +95,28 @@ class YtDlpFetchAdapter(
                 // the high-quality chain retries the usual YouTube sizes; if every
                 // candidate fails the plain loader still tries the raw URL once
                 ImageHelper.loadImageHighQuality(item.thumbnail, binding.resultThumbnail) { loaded ->
-                    if (!loaded) ImageHelper.loadImage(item.thumbnail, binding.resultThumbnail)
+                    if (loaded) {
+                        // A photo has no stream dimensions to read, so the ratio is
+                        // taken from the picture that actually arrived. Without this
+                        // every image was forced into the 16:9 fallback box.
+                        val drawable = binding.resultThumbnail.drawable
+                        val intrinsicWidth = drawable?.intrinsicWidth ?: 0
+                        val intrinsicHeight = drawable?.intrinsicHeight ?: 0
+                        if (intrinsicWidth > 0 && intrinsicHeight > 0) {
+                            val density = binding.root.resources.displayMetrics.density
+                            val cardWidth = (132 * density).toInt()
+                            val ratio = (intrinsicWidth.toFloat() / intrinsicHeight)
+                                .coerceIn(0.4f, 2.5f)
+                            binding.resultThumbnail.layoutParams =
+                                binding.resultThumbnail.layoutParams.apply {
+                                    width = cardWidth
+                                    height = (cardWidth / ratio).toInt()
+                                        .coerceIn((56 * density).toInt(), (240 * density).toInt())
+                                }
+                        }
+                    } else {
+                        ImageHelper.loadImage(item.thumbnail, binding.resultThumbnail)
+                    }
                 }
             }
             binding.root.setOnClickListener { onVideoClick(item) }

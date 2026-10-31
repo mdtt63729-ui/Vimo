@@ -160,7 +160,9 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         if (videoId.isEmpty()) return
 
         val popup = PopupMenu(requireContext(), anchor)
-        popup.menu.add(0, 1, 0, R.string.menu_save_to_playlist)
+        popup.menu.add(0, 7, 0, R.string.menu_play_next)
+        popup.menu.add(0, 8, 1, R.string.menu_play_last)
+        popup.menu.add(0, 1, 2, R.string.menu_save_to_playlist)
         popup.menu.add(0, 2, 1, R.string.menu_download)
         popup.menu.add(0, 3, 2, R.string.menu_share)
         popup.menu.add(0, 4, 3, R.string.menu_not_interested)
@@ -169,6 +171,14 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
+                7 -> {
+                    com.atube.app.util.PlayingQueue.addAsNext(video)
+                    Toast.makeText(requireContext(), R.string.menu_queued_next, Toast.LENGTH_SHORT).show()
+                }
+                8 -> {
+                    com.atube.app.util.PlayingQueue.add(video)
+                    Toast.makeText(requireContext(), R.string.menu_queued_last, Toast.LENGTH_SHORT).show()
+                }
                 1 -> AddToPlaylistDialog().apply {
                     arguments = bundleOf(IntentData.videoInfo to video)
                 }.show(childFragmentManager, AddToPlaylistDialog::class.java.name)

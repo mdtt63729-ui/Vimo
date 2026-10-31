@@ -662,4 +662,9 @@
     <string name="menu_dont_recommend_channel">Don\'t recommend channel</string>
     <string name="menu_report">Report</string>
     <string name="menu_hidden">Hidden from your feed</string>
+
+    <string name="menu_play_next">Play next in queue</string>
+    <string name="menu_play_last">Play last in queue</string>
+    <string name="menu_queued_next">Will play next</string>
+    <string name="menu_queued_last">Added to the end of the queue</string>
 </resources>
