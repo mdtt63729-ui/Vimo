@@ -185,14 +185,80 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
 
     private fun fetchLink(url: String) {
         runFetch {
-            val json = YtDlpEngine.extractInfo(url)
-            if (!json.optBoolean("ok")) {
-                throw IllegalStateException(
-                    json.optString("error").ifBlank { getString(R.string.fetch_failed) }
-                )
+            try {
+                val json = YtDlpEngine.extractInfo(url)
+                if (!json.optBoolean("ok")) {
+                    throw IllegalStateException(
+                        json.optString("error").ifBlank { getString(R.string.fetch_failed) }
+                    )
+                }
+                itemsFromInfo(json)
+            } catch (blocked: Throwable) {
+                // YouTube answers yt-dlp with "Sign in to confirm you're not a bot"
+                // from a phone. The app already ships an InnerTube resolver for
+                // playback, so use the same one here instead of failing.
+                val videoId = youtubeIdOf(url) ?: throw blocked
+                val streams = com.atube.app.api.muso.MusoStreamResolver.resolve(videoId)
+                    ?: throw blocked
+                itemsFromInnerTube(videoId, streams, url)
             }
-            itemsFromInfo(json)
         }
+    }
+
+    /** The video id of a YouTube link, or null when it is not one. */
+    private fun youtubeIdOf(url: String): String? {
+        if (!url.contains("youtu")) return null
+        return when {
+            url.contains("watch?v=") -> url.substringAfter("watch?v=").substringBefore('&')
+            url.contains("youtu.be/") -> url.substringAfter("youtu.be/").substringBefore('?')
+            url.contains("/shorts/") -> url.substringAfter("/shorts/").substringBefore('?')
+            else -> null
+        }?.takeIf { it.length in 6..20 }
+    }
+
+    /** Turns InnerTube's resolved streams into the same rows the fetch screen uses. */
+    private fun itemsFromInnerTube(
+        videoId: String,
+        streams: com.atube.app.api.obj.Streams,
+        pageUrl: String
+    ): List<YtDlpResult> {
+        currentTitle = streams.title
+        val out = mutableListOf<YtDlpResult>()
+
+        val firstVideo = streams.videoStreams.firstOrNull {
+            (it.width ?: 0) > 0 && (it.height ?: 0) > 0
+        }
+        val aspect = firstVideo?.let {
+            (it.width ?: 16).toFloat() / (it.height ?: 9).toFloat()
+        } ?: (16f / 9f)
+
+        out += YtDlpResult.Video(
+            id = videoId,
+            title = streams.title,
+            uploader = streams.uploader,
+            duration = streams.duration,
+            thumbnail = streams.thumbnailUrl,
+            views = 0,
+            url = pageUrl,
+            aspect = aspect
+        )
+
+        (streams.videoStreams + streams.audioStreams).forEach { stream ->
+            val direct = stream.url?.takeIf { it.startsWith("http") } ?: return@forEach
+            val isAudio = stream.videoOnly == false && stream.quality == null
+            out += YtDlpResult.Format(
+                label = stream.quality ?: if (isAudio) "Audio" else "Video",
+                detail = listOfNotNull(
+                    stream.format?.takeIf { it.isNotBlank() },
+                    if (isAudio) "Audio only" else "Video + audio"
+                ).joinToString(" · "),
+                directUrl = direct,
+                formatId = "direct",
+                pageUrl = pageUrl,
+                isAudio = isAudio
+            )
+        }
+        return out
     }
 
     private fun runSearch(query: String) {
@@ -207,7 +273,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         }
     }
 
-    private fun runFetch(block: () -> List<YtDlpResult>) {
+    private fun runFetch(block: suspend () -> List<YtDlpResult>) {
         fetchJob?.cancel()
         skeletonJob?.cancel()
 
@@ -413,9 +479,16 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                 if (format.convertToMp3) {
                     if (YtDlpEngine.startAudioDownload(format.pageUrl, directory.toFile(), jobId)) "" else null
                 } else if (format.formatId == "direct") {
-                    // Pinterest hands back the media URL itself, not a page to extract
+                    // A direct URL (Pinterest media, or an InnerTube stream) is
+                    // downloaded as-is. InnerTube URLs only answer to the headers
+                    // that were used to resolve them, so those go along.
+                    val headers = com.atube.app.api.muso.MusoStreamResolver
+                        .headersFor(format.directUrl)
+                        .let { map ->
+                            if (map.isEmpty()) "" else org.json.JSONObject(map as Map<*, *>).toString()
+                        }
                     YtDlpEngine.startDownload(
-                        format.directUrl, "direct", directory.toFile(), jobId
+                        format.directUrl, "direct", directory.toFile(), jobId, headers
                     )
                 } else {
                     YtDlpEngine.startDownload(

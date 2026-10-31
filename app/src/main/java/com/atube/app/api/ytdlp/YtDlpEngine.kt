@@ -148,13 +148,19 @@ object YtDlpEngine {
      * Blocks until the download finishes. Returns the path of the file yt-dlp wrote,
      * or null when the download failed.
      */
-    fun startDownload(url: String, selector: String, outputDir: File, jobId: String): String? {
+    fun startDownload(
+        url: String,
+        selector: String,
+        outputDir: File,
+        jobId: String,
+        headersJson: String = ""
+    ): String? {
         val context = appContext ?: return null
         if (!ensureStarted(context)) return null
         runCatching { outputDir.mkdirs() }
         return runCatching {
             val raw = bridge(context)
-                .callAttr("start_download", url, selector, outputDir.absolutePath, jobId)
+                .callAttr("start_download", url, selector, outputDir.absolutePath, jobId, headersJson)
                 .toString()
             val json = JSONObject(raw)
             if (!json.optBoolean("ok")) null

@@ -234,7 +234,7 @@ def extract_info(url):
         })
 
 
-def start_download(url, format_selector, output_dir, job_id):
+def start_download(url, format_selector, output_dir, job_id, headers_json=""):
     """Download into app-private storage. Kotlin polls get_progress(job_id).
 
     Blocks until finished, so call it on a background thread.
@@ -247,7 +247,7 @@ def start_download(url, format_selector, output_dir, job_id):
         import re as _re
         ext = os.path.splitext(url.split("?")[0])[1] or ".mp4"
         name = _re.sub(r"[^A-Za-z0-9._ -]", "_", (url.rstrip("/").rsplit("/", 1)[-1] or "media"))[:80]
-        return download_direct(url, os.path.join(output_dir, name + ext), job_id)
+        return download_direct(url, os.path.join(output_dir, name + ext), job_id, headers_json)
     opts = {
         "quiet": True,
         "no_warnings": True,
@@ -551,8 +551,12 @@ def pinterest_extract(url):
         return json.dumps({"ok": False, "error": (str(e).strip() or "Could not read that Pin.")[:400]})
 
 
-def download_direct(url, out_path, job_id):
-    """Streams a direct media URL to out_path, writing the same progress file."""
+def download_direct(url, out_path, job_id, headers_json=""):
+    """Streams a direct media URL to out_path, writing the same progress file.
+
+    ``headers_json`` carries the request headers the InnerTube resolver used, when
+    the URL came from there - those URLs only answer to the right User-Agent.
+    """
     import urllib.request
 
     job_id = str(job_id)
@@ -561,13 +565,21 @@ def download_direct(url, out_path, job_id):
         if out_dir:
             os.makedirs(out_dir, exist_ok=True)
 
-        req = urllib.request.Request(url, headers={
+        headers = {
             "User-Agent": (
                 "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 "
                 "(KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
             ),
             "Accept": "*/*",
-        })
+        }
+        if headers_json:
+            try:
+                extra = json.loads(headers_json)
+                if isinstance(extra, dict):
+                    headers.update({str(k): str(v) for k, v in extra.items()})
+            except Exception:
+                pass
+        req = urllib.request.Request(url, headers=headers)
         _write_progress(job_id, {"status": "downloading", "percent": 0, "message": "Downloading"})
         with urllib.request.urlopen(req, timeout=30) as response, open(out_path, "wb") as fh:
             total = int(response.headers.get("Content-Length") or 0)

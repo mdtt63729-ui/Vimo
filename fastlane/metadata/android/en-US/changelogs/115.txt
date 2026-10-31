@@ -1,0 +1,5 @@
+Vimo 33.42
+
+- When YouTube blocks yt-dlp ("Sign in to confirm you're not a bot"), a pasted
+  YouTube link is now resolved through the app's own InnerTube resolver instead,
+  and the streams it returns download normally.
