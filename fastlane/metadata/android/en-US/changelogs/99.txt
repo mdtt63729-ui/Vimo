@@ -1,0 +1,5 @@
+Vimo 33.26
+
+- The Library list now shows only files the app's own downloader fetched.
+- Files from the Downloader tab's yt-dlp fetch stay on that screen, and the list
+  there survives an app restart instead of emptying out.

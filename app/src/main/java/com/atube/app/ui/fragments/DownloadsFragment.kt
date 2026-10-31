@@ -112,6 +112,9 @@ enum class DownloadSortingOrder(@StringRes val stringId: Int) {
  * through yt-dlp's ytsearch pseudo-extractor. Tapping a search hit loads that
  * video's formats, tapping a format copies its direct stream URL.
  */
+/** Marks a download that came from the yt-dlp fetch screen, not the app downloader. */
+const val YTDLP_ID_PREFIX = "ytdlp_"
+
 class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     private var _binding: FragmentDownloadsBinding? = null
     private val binding get() = _binding!!
@@ -149,6 +152,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
 
         shimmerSkeleton()
         showEmpty(getString(R.string.fetch_empty_message))
+        loadPreviousDownloads()
     }
 
     fun bindDownloadService() = Unit
@@ -449,7 +453,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             directory.toFile().listFiles()?.maxByOrNull { it.lastModified() }
         } ?: return
 
-        val videoId = "ytdlp_$jobId"
+        val videoId = "$YTDLP_ID_PREFIX$jobId"
         val dao = Database.downloadDao()
 
         withContext(Dispatchers.IO) {
@@ -471,6 +475,44 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             )
         }
         downloadedIds[jobId] = videoId
+    }
+
+    /**
+     * The strip is not session-only: everything the fetch screen downloaded is
+     * registered in the download database, so it is re-listed here on open. That
+     * is what keeps these files in this section instead of the Library.
+     */
+    private fun loadPreviousDownloads() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val saved = withContext(Dispatchers.IO) {
+                Database.downloadDao().getAll()
+                    .filter { it.download.videoId.startsWith(YTDLP_ID_PREFIX) }
+                    .sortedByDescending { it.downloadItems.firstOrNull()?.id ?: 0 }
+            }
+            if (_binding == null || saved.isEmpty()) return@launch
+
+            saved.forEach { entry ->
+                addSavedRow(entry.download.videoId, entry.download.title)
+            }
+            binding.downloadsSection.isVisible = true
+        }
+    }
+
+    private fun addSavedRow(videoId: String, title: String) {
+        val row = ItemYtdlpDownloadBinding.inflate(
+            LayoutInflater.from(requireContext()), binding.downloadsContainer, false
+        )
+        row.downloadTitle.text = title.ifBlank { getString(R.string.fetch_saved) }
+        row.downloadProgress.isVisible = false
+        row.downloadCancel.isVisible = false
+        row.downloadStatus.text = getString(R.string.fetch_saved)
+        row.root.setOnClickListener {
+            NavigationHelper.navigateVideo(
+                requireContext(),
+                PlayerData(videoId = videoId, isOffline = true)
+            )
+        }
+        binding.downloadsContainer.addView(row.root)
     }
 
     private fun cancelDownload(jobId: String) {
@@ -659,8 +701,12 @@ class DownloadsFragmentPage : DynamicLayoutManagerFragment(R.layout.fragment_dow
             val downloads = withContext(Dispatchers.IO) {
                 Database.downloadDao().getAll()
             }.let { downloads ->
-                if (downloadTab != DownloadTab.PLAYLIST) downloads.filterByTab(downloadTab)
-                else downloads.filter { playlistItems.orEmpty().contains(it.download.videoId) }
+                // Files pulled from the Downloader tab's yt-dlp fetch belong to
+                // that screen, not here; they are registered in the database only
+                // so they can play in the app's own player.
+                val appDownloads = downloads.filterNot { it.download.videoId.startsWith(YTDLP_ID_PREFIX) }
+                if (downloadTab != DownloadTab.PLAYLIST) appDownloads.filterByTab(downloadTab)
+                else appDownloads.filter { playlistItems.orEmpty().contains(it.download.videoId) }
             }
 
             submitDownloadList(downloads)
