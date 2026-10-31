@@ -582,7 +582,14 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             return
         }
         binding.linkInput.setText(text)
-        binding.linkInput.setSelection(text.length)
+        // A pasted link can be longer than the field keeps, and the emoji2 builder
+        // reports a shorter length than the raw string, so setting the cursor to the
+        // raw length threw "setSpan ... ends beyond length 5000". Put the cursor at
+        // the end of whatever actually landed in the field.
+        binding.linkInput.post {
+            val editable = binding.linkInput.text ?: return@post
+            runCatching { binding.linkInput.setSelection(editable.length) }
+        }
     }
 
     private fun shimmerSkeleton() {

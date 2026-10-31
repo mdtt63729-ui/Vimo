@@ -94,6 +94,8 @@ interface DownloadDao {
     @Query("SELECT * FROM downloadplaylistvideoscrossref WHERE playlistId = :playlistId")
     suspend fun getVideoIdsFromPlaylist(playlistId: String): List<DownloadPlaylistVideosCrossRef>
 
-    @Insert
+    // REPLACE, not plain INSERT: downloading the same video twice (or resuming it)
+    // offered the same segment uuids again and hit the primary key constraint.
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
     suspend fun insertSponsorBlockSegments(segments: List<DownloadSponsorBlockSegment>)
 }

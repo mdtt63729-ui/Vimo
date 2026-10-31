@@ -1,0 +1,6 @@
+Vimo 33.38
+
+- Fixed the crash on first open: sponsor-block segments are inserted with REPLACE,
+  so downloading the same video twice no longer breaks the primary key.
+- Fixed the crash when pasting a long link: the cursor is placed at the end of
+  what the field actually holds.
