@@ -98,6 +98,9 @@ class MainActivity : AbstractPlayerHostActivity() {
         R.id.libraryFragment
     )
 
+    /** Space between the minimised player and the navigation bar, in dp. */
+    private val MINI_PLAYER_GAP_DP = 12f
+
     /** Last time the low-network card was shown, so it cannot repeat in a burst. */
     private var lastLowNetworkWarningAt = 0L
 
@@ -406,11 +409,16 @@ class MainActivity : AbstractPlayerHostActivity() {
         // the sanity range keeps a bar that has not been laid out yet from
         // pushing the mini player off the top of the screen
         val measured = rootHeight - bar.top
-        return if (measured in bar.height..(rootHeight / 2)) {
+        val barTopDistance = if (measured in bar.height..(rootHeight / 2)) {
             measured.toFloat()
         } else {
             bar.height.toFloat()
         }
+
+        // Breathing room between the mini player and the bar. Landing exactly on
+        // the bar's top edge made the two read as one glued block; the gap lifts
+        // the card clear of the pill the way YouTube leaves it floating.
+        return barTopDistance + MINI_PLAYER_GAP_DP * resources.displayMetrics.density
     }
 
     /**

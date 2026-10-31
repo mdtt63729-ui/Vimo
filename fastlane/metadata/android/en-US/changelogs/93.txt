@@ -1,0 +1,6 @@
+Vimo 33.20
+
+- The navigation bar now shows all three labels under their icons, with the
+  active pill behind the selected icon, so no tab is left as a bare symbol.
+- The minimised player floats clear of the navigation bar instead of sitting
+  flush against it.

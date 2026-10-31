@@ -9,7 +9,6 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.text.TextUtils
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.ViewGroup
@@ -17,26 +16,27 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import androidx.dynamicanimation.animation.FloatValueHolder
 import androidx.dynamicanimation.animation.DynamicAnimation
+import androidx.dynamicanimation.animation.FloatValueHolder
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
 import com.google.android.material.color.MaterialColors
 import kotlin.math.abs
 import kotlin.math.floor
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
  * Floating pill navigation bar.
  *
- * One spring-driven progress value drives everything - slot widths, the moving
- * pill, icon scale and the label reveal - so nothing can drift out of step.
+ * Every destination is drawn the way the Material 3 navigation bar draws them -
+ * the icon on top, its label underneath, both always visible - and the active
+ * indicator is a pill that sits behind the selected icon. The previous version
+ * only revealed the label of the selected item, which left the bar looking like
+ * two bare icons with a stray word next to one of them.
  *
- * Widths are computed from the labels as they are actually drawn (measured with
- * each TextView's own paint), and every label is given that exact width. The old
- * version measured with a throwaway Paint and then let LinearLayout size the
- * label with WRAP_CONTENT inside a proportional slot, which is what clipped
- * "Downloader" down to "Do".
+ * Slot widths are static, so a selection only moves the pill: no child is
+ * re-measured or re-laid out while the spring runs.
  */
 class Material3FloatingNavBarView @JvmOverloads constructor(
     context: Context,
@@ -49,7 +49,7 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     // Shorts is deliberately absent: three destinations for now.
     private val destinations = listOf(
         Destination("Home", R.drawable.ic_nav_home),
-        Destination("Downloader", R.drawable.ic_nav_downloader),
+        Destination("Downloads", R.drawable.ic_nav_downloader),
         Destination("Library", R.drawable.ic_nav_library)
     )
 
@@ -82,24 +82,36 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
 
     private var progress = 0f
     private var selected = 0
-    private var target = 0
-    /** Speed of the last animation frame, used to stretch the pill while it travels. */
     private var velocity = 0f
     var onItemSelected: ((Int) -> Unit)? = null
 
+    // ---- geometry -----------------------------------------------------------
+    private val barHeight = dp(72f).toInt()
+    private val innerHeight = dp(56f).toInt()
+    private val iconSize = dp(24f).toInt()
+    private val labelHeight = dp(16f).toInt()
+    private val labelGapV = dp(3f)
+    /** Smallest slot: wide enough to hold the indicator pill with a little air. */
+    private val minSlotWidth = dp(56f)
+    private val labelSidePadding = dp(10f)
+    private val outerInset = dp(6f)
+    private val pillWidth = dp(54f)
+    private val pillHeight = dp(30f)
+    private val cornerRadius = dp(36f)
+    private val labelTextSize = 11.5f
+
+    /** Total height of the icon + gap + label block, used to centre the pill. */
+    private val contentHeight get() = iconSize + labelGapV + labelHeight
+
     /**
-     * One spring for the lifetime of the view, driven through a FloatValueHolder.
-     *
-     * The previous version rebuilt a SpringAnimation on every tap and moved the
-     * value through a FloatPropertyCompat wrapper, cancelling whatever was already
-     * running. animateToFinalPosition() on a single instance is the supported way
-     * to retarget a spring: it keeps the current velocity, so a second tap mid
-     * flight bends the motion instead of snapping it.
+     * One spring for the lifetime of the view, driven through a FloatValueHolder
+     * and retargeted with animateToFinalPosition(), which keeps the velocity the
+     * spring already has - so a second tap mid flight bends instead of snapping.
      */
     private val progressHolder = FloatValueHolder(0f)
     private val spring = SpringAnimation(progressHolder).apply {
         spring = SpringForce(0f).apply {
-            // visibly bouncy: overshoots its slot, settles back, then stops
+            // under-damped on purpose: overshoots its slot, settles back, stops
             dampingRatio = DAMPING
             stiffness = STIFFNESS
         }
@@ -108,26 +120,10 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
         }
     }
 
-    // ---- geometry -----------------------------------------------------------
-    private val barHeight = dp(64f).toInt()
-    private val innerHeight = dp(48f).toInt()
-    /** Width reserved for the icon, drawn at 24dp and centred inside it. */
-    private val iconBox = dp(48f)
-    private val iconSize = dp(24f).toInt()
-    private val labelGap = dp(6f)
-    private val labelEndPadding = dp(16f)
-    private val outerInset = dp(6f)
-    private val pillInset = dp(4f)
-    private val cornerRadius = dp(32f)
-
-    private val labelTextSize = 13f
-
     init {
         setWillNotDraw(false)
         isClickable = false
         elevation = dp(10f)
-        // The background also gives elevation its rounded outline, so the bar casts
-        // a proper shadow instead of a rectangle.
         background = GradientDrawable().apply {
             setColor(surfaceColor)
             cornerRadius = this@Material3FloatingNavBarView.cornerRadius
@@ -135,10 +131,10 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
 
         destinations.forEachIndexed { index, destination ->
             val slot = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                clipChildren = true
-                clipToPadding = true
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                clipChildren = false
+                clipToPadding = false
                 isClickable = true
                 isFocusable = true
                 contentDescription = destination.label
@@ -151,7 +147,7 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
                     if (index == selected) selectedContentColor else unselectedContentColor
                 )
                 scaleType = ImageView.ScaleType.FIT_CENTER
-                layoutParams = LinearLayout.LayoutParams(iconBox.roundToInt(), iconSize)
+                layoutParams = LinearLayout.LayoutParams(iconSize, iconSize)
                 importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
             }
 
@@ -160,11 +156,12 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
                 textSize = labelTextSize
                 setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL))
                 maxLines = 1
-                ellipsize = TextUtils.TruncateAt.END
                 includeFontPadding = false
-                gravity = Gravity.CENTER_VERTICAL
-                setTextColor(selectedContentColor)
-                alpha = if (index == 0) 1f else 0f
+                gravity = Gravity.CENTER
+                setTextColor(if (index == selected) selectedContentColor else unselectedContentColor)
+                layoutParams = LinearLayout.LayoutParams(
+                    LayoutParams.WRAP_CONTENT, labelHeight
+                ).apply { topMargin = labelGapV.roundToInt() }
                 importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
             }
 
@@ -176,22 +173,13 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
             labelViews += label
         }
 
-        // The label widths are only known once the TextViews exist, so the exact
-        // widths are assigned here rather than at construction time.
-        labelViews.forEach { label ->
-            label.layoutParams = LinearLayout.LayoutParams(
-                labelWidthOf(label).roundToInt(), innerHeight
-            ).apply { marginStart = labelGap.roundToInt() }
-        }
-
         contentDescription = "Bottom navigation"
     }
 
     /** Width the label needs, measured with the paint the TextView draws with. */
     private fun labelWidthOf(label: TextView): Float =
-        label.paint.measureText(label.text.toString()) + dp(1f)
+        label.paint.measureText(label.text.toString()) + dp(2f)
 
-    /** Selects a destination. The index is clamped to the available items. */
     @JvmOverloads
     fun setSelectedIndex(index: Int, animate: Boolean = true) {
         select(index, notify = false, animate = animate)
@@ -202,14 +190,12 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     private fun select(index: Int, notify: Boolean, animate: Boolean = true) {
         val safeIndex = index.coerceIn(destinations.indices)
 
-        // Already settled on this slot: nothing to animate.
         if (safeIndex == selected && abs(progress - safeIndex) < 0.001f) {
             if (notify) onItemSelected?.invoke(safeIndex)
             return
         }
 
         selected = safeIndex
-        target = safeIndex
         itemViews.forEachIndexed { i, view ->
             view.isSelected = i == selected
             view.contentDescription =
@@ -217,7 +203,6 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
         }
 
         if (animate) {
-            // keeps the running velocity, so a mid-flight retarget bends smoothly
             spring.animateToFinalPosition(safeIndex.toFloat())
         } else {
             spring.cancel()
@@ -229,28 +214,19 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
 
     // ---- measurement --------------------------------------------------------
 
-    private fun contentWidth(): Float = contentWidthOf(width)
-
     private fun contentWidthOf(viewWidth: Int): Float =
         (viewWidth - 2 * outerInset).coerceAtLeast(1f)
 
     /**
-     * Slot widths for the current progress.
-     *
-     * Every slot always reserves [iconBox]. The slot being selected additionally
-     * reserves the gap, the label's measured width and a trailing padding, so a
-     * label can never be squeezed below the width it needs. Whatever is left over
-     * is shared out evenly, which is what keeps the icons from bunching up.
+     * Static slot widths: the widest of the minimum slot and the label plus its
+     * side padding, with the leftover shared out evenly so the items sit centred
+     * rather than bunched at the ends. No label can be clipped, because the slot
+     * is always at least as wide as the text it holds.
      */
     private fun slotWidths(content: Float): FloatArray {
         val count = destinations.size
-        val widths = FloatArray(count) { iconBox }
-        destinations.indices.forEach { i ->
-            val expand = (1f - abs(progress - i)).coerceIn(0f, 1f)
-            if (expand > 0f) {
-                val extra = labelGap + labelWidthOf(labelViews[i]) + labelEndPadding
-                widths[i] += extra * expand
-            }
+        val widths = FloatArray(count) { i ->
+            max(minSlotWidth, labelWidthOf(labelViews[i]) + 2 * labelSidePadding)
         }
 
         val used = widths.sum()
@@ -259,8 +235,6 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
             val share = spare / count
             for (i in 0 until count) widths[i] += share
         } else if (spare < 0f) {
-            // Only on a very narrow window: shrink proportionally rather than
-            // letting the last slot run past the edge.
             val scale = content / used
             for (i in 0 until count) widths[i] *= scale
         }
@@ -282,19 +256,7 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        layoutSlots()
-    }
-
-    /**
-     * Positions the slots for the current progress.
-     *
-     * Called directly from the spring's setter rather than through requestLayout():
-     * a full measure/layout pass every animation frame is what made the shift
-     * stutter on high refresh rate screens.
-     */
-    private fun layoutSlots() {
-        if (width == 0) return
-        val widths = slotWidths(contentWidth())
+        val widths = slotWidths(contentWidthOf(width))
         var x = outerInset
         val top = (height - innerHeight) / 2
         itemViews.forEachIndexed { i, child ->
@@ -309,36 +271,37 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        // The surface itself comes from the background drawable, which is what
-        // gives elevation its rounded outline; only the pill is painted here.
-        val widths = slotWidths(contentWidth())
+        // The surface comes from the background drawable, which also gives
+        // elevation its rounded outline; only the indicator is painted here.
+        if (width == 0) return
+
+        val widths = slotWidths(contentWidthOf(width))
+        val centres = FloatArray(destinations.size)
+        var x = outerInset
+        for (i in destinations.indices) {
+            centres[i] = x + widths[i] / 2f
+            x += widths[i]
+        }
 
         val lower = floor(progress).toInt().coerceIn(destinations.indices)
         val upper = (lower + 1).coerceAtMost(destinations.lastIndex)
         val fraction = (progress - lower).coerceIn(0f, 1f)
+        val centreX = centres[lower] + (centres[upper] - centres[lower]) * fraction
 
-        var before = outerInset
-        for (i in 0 until lower) before += widths[i]
+        // vertical: the pill hugs the icon, not the whole slot
+        val slotTop = (height - innerHeight) / 2f
+        val contentTop = slotTop + (innerHeight - contentHeight) / 2f
+        val iconCentreY = contentTop + iconSize / 2f
+        val pillTop = iconCentreY - pillHeight / 2f
+        val pillBottom = iconCentreY + pillHeight / 2f
+        val radius = pillHeight / 2f
 
-        val lowerWidth = widths[lower]
-        val upperWidth = widths[upper]
-        val pillLeft = before + lowerWidth * fraction
-        val pillWidth = lowerWidth + (upperWidth - lowerWidth) * fraction
+        // stretch along the direction of travel, then pull back as it settles
+        val stretch = (abs(velocity) * STRETCH_FACTOR).coerceAtMost(MAX_STRETCH) * pillWidth
+        val halfWidth = (pillWidth + stretch) / 2f
 
-        val pillTop = (height - innerHeight) / 2f + pillInset
-        val pillBottom = (height + innerHeight) / 2f - pillInset
-        val radius = (pillBottom - pillTop) / 2f
-
-        // While the pill is travelling it stretches along the direction of motion
-        // and pulls back in as it settles. This is what makes a long jump read as
-        // liquid rather than as two discrete positions.
-        val stretch = (abs(velocity) * STRETCH_FACTOR)
-            .coerceAtMost(MAX_STRETCH) * pillWidth
-        val centre = pillLeft + pillWidth / 2f
-        var left = centre - (pillWidth + stretch) / 2f
-        var right = centre + (pillWidth + stretch) / 2f
-
-        // never let the stretch push the pill outside the bar
+        var left = centreX - halfWidth
+        var right = centreX + halfWidth
         val minLeft = outerInset
         val maxRight = width - outerInset
         if (left < minLeft) {
@@ -349,13 +312,11 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
             left -= right - maxRight
             right = maxRight
         }
-        left = left.coerceAtLeast(minLeft)
-        right = right.coerceAtMost(maxRight)
 
         indicatorRect.set(
-            left + pillInset,
+            left.coerceAtLeast(minLeft),
             pillTop,
-            right - pillInset,
+            right.coerceAtMost(maxRight),
             pillBottom
         )
         canvas.drawRoundRect(indicatorRect, radius, radius, indicatorPaint)
@@ -366,7 +327,6 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     private fun setProgress(value: Float, v: Float = 0f) {
         velocity = v
         progress = value.coerceIn(0f, destinations.lastIndex.toFloat())
-        layoutSlots()
         updateAnimatedChildren()
         invalidate()
     }
@@ -374,7 +334,6 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     private fun updateAnimatedChildren() {
         destinations.indices.forEach { i ->
             val expand = (1f - abs(progress - i)).coerceIn(0f, 1f)
-            // ease the emphasis so the icon does not snap at the start of a move
             val emphasis = expand * expand * (3f - 2f * expand)
 
             iconViews[i].apply {
@@ -387,9 +346,10 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
             }
 
             labelViews[i].apply {
-                alpha = ((expand - 0.35f) / 0.65f).coerceIn(0f, 1f)
-                translationX = (1f - expand) * dp(16f)
-                setTextColor(selectedContentColor)
+                alpha = 0.72f + 0.28f * emphasis
+                setTextColor(
+                    if (i == selected) selectedContentColor else unselectedContentColor
+                )
             }
         }
     }
@@ -400,15 +360,12 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     }
 
     companion object {
-        /**
-         * Under-damped on purpose: 0.55 overshoots the target slot by roughly a
-         * tenth of the distance and eases back, which is the bounce.
-         */
+        /** Under-damped on purpose: 0.55 overshoots the slot and eases back. */
         private const val STIFFNESS = 240f
         private const val DAMPING = 0.55f
 
         /** How far the pill stretches horizontally per unit of travel speed. */
-        private const val STRETCH_FACTOR = 0.0022f
-        private const val MAX_STRETCH = 0.16f
+        private const val STRETCH_FACTOR = 0.0018f
+        private const val MAX_STRETCH = 0.30f
     }
 }
