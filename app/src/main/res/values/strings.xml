@@ -651,4 +651,6 @@
     <string name="converter_done_short">Saved to the audio folder</string>
     <string name="converter_failed">The conversion failed</string>
     <string name="converter">Converter</string>
+
+    <string name="fetch_working">Fetching…</string>
 </resources>

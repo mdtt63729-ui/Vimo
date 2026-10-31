@@ -65,19 +65,6 @@
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/converter"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:ellipsize="marquee"
-                    android:maxLines="1"
-                    android:text="@string/converter"
-                    android:textStyle="bold"
-                    app:icon="@drawable/ic_nav_downloader"
-                    app:materialSizeOverlay="@style/SizeOverlay.Material3Expressive.Button.Medium" />
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

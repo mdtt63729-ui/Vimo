@@ -89,7 +89,15 @@ class YtDlpFetchAdapter(
                 this.height = height
             }
 
-            ImageHelper.loadImageHighQuality(item.thumbnail, binding.resultThumbnail)
+            if (item.thumbnail.isBlank()) {
+                binding.resultThumbnail.setImageDrawable(null)
+            } else {
+                // the high-quality chain retries the usual YouTube sizes; if every
+                // candidate fails the plain loader still tries the raw URL once
+                ImageHelper.loadImageHighQuality(item.thumbnail, binding.resultThumbnail) { loaded ->
+                    if (!loaded) ImageHelper.loadImage(item.thumbnail, binding.resultThumbnail)
+                }
+            }
             binding.root.setOnClickListener { onVideoClick(item) }
         }
     }

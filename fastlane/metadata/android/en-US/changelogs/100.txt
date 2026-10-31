@@ -1,0 +1,7 @@
+Vimo 33.27
+
+- The Converter button is gone from the Library, as it should be; the audio
+  conversion lives in the fetch flow, as an "Audio · MP3" option.
+- Fetching no longer flashes: the skeleton waits a moment, the Fetch button
+  shows progress, and a failure now shows its real reason in a bar at the bottom.
+- Result thumbnails fall back to the raw URL when the usual sizes fail.

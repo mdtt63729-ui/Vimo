@@ -121,6 +121,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
 
     private lateinit var adapter: YtDlpFetchAdapter
     private var fetchJob: Job? = null
+    private var skeletonJob: Job? = null
 
     private val downloadRows = mutableMapOf<String, ItemYtdlpDownloadBinding>()
     /** jobId -> videoId of the row registered in the download database. */
@@ -153,6 +154,13 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         shimmerSkeleton()
         showEmpty(getString(R.string.fetch_empty_message))
         loadPreviousDownloads()
+
+        // Starting Chaquopy takes a few seconds the first time. Do it now, off the
+        // main thread, so the first Fetch does not sit waiting for it.
+        YtDlpEngine.init(requireContext())
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.IO) { YtDlpEngine.version() }
+        }
     }
 
     fun bindDownloadService() = Unit
@@ -200,11 +208,24 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
 
     private fun runFetch(block: () -> List<YtDlpResult>) {
         fetchJob?.cancel()
-        showLoading()
+        skeletonJob?.cancel()
+
+        // The skeleton used to appear the instant Fetch was pressed, so a fetch
+        // that failed in a few milliseconds flashed the placeholder on and off and
+        // looked like nothing happened. It now waits 250 ms, and the buttons stay
+        // disabled until the attempt really finishes.
+        skeletonJob = viewLifecycleOwner.lifecycleScope.launch {
+            delay(250)
+            if (fetchJob?.isActive == true) showLoading()
+        }
+        setFetching(true)
 
         fetchJob = viewLifecycleOwner.lifecycleScope.launch {
             val outcome = withContext(Dispatchers.IO) { runCatching { block() } }
             if (_binding == null) return@launch
+
+            skeletonJob?.cancel()
+            setFetching(false)
 
             outcome.onSuccess { items ->
                 if (items.isEmpty()) {
@@ -214,9 +235,21 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                     showResults()
                 }
             }.onFailure { error ->
-                showEmpty(error.message ?: getString(R.string.fetch_failed))
+                val message = error.message?.takeIf { it.isNotBlank() }
+                    ?: getString(R.string.fetch_failed)
+                showEmpty(message)
+                // the empty state is small, so the reason is also shown as a bar
+                Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
             }
         }
+    }
+
+    /** Keeps the button honest while an attempt is running. */
+    private fun setFetching(running: Boolean) {
+        binding.fetchButton.isEnabled = !running
+        binding.fetchButton.text = getString(
+            if (running) R.string.fetch_working else R.string.fetch
+        )
     }
 
     private fun itemsFromInfo(json: JSONObject): List<YtDlpResult> {
@@ -582,6 +615,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     override fun onDestroyView() {
         fetchJob?.cancel()
         fetchJob = null
+        skeletonJob?.cancel()
+        skeletonJob = null
         downloadJobs.values.forEach { it.cancel() }
         downloadJobs.clear()
         downloadRows.clear()

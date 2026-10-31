@@ -84,10 +84,6 @@ class LibraryFragment : DynamicLayoutManagerFragment(R.layout.fragment_library) 
             }
         }
 
-        binding.converter.setOnClickListener {
-            findNavController().navigate(R.id.action_libraryFragment_to_converterFragment)
-        }
-
         binding.downloads.setOnClickListener {
             // the library lists files the app downloaded itself; the yt-dlp fetch
             // screen keeps its own downloads under the link box
