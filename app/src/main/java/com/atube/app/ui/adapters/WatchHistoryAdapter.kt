@@ -41,7 +41,12 @@ class WatchHistoryAdapter :
             channelName.text = video.uploader
             videoInfo.text =
                 video.uploadDate?.takeIf { !video.isLive }?.let { TextUtils.localizeDate(it) }
-            ImageHelper.loadImageHighQuality(video.thumbnailUrl, thumbnail)
+            // A history row can be written without a thumbnail URL (older entries,
+            // or a video opened from a source that did not carry one). Deriving it
+            // from the id keeps the picture there instead of leaving a white box.
+            val thumbnailUrl = video.thumbnailUrl?.takeIf { it.isNotBlank() }
+                ?: "https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg"
+            ImageHelper.loadImageHighQuality(thumbnailUrl, thumbnail)
 
             if (video.duration != null) {
                 // we pass in 0 for the uploadDate, as a future video cannot be watched already

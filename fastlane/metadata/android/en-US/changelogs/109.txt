@@ -1,0 +1,10 @@
+Vimo 33.36
+
+- Library: Downloads sits next to Watch history, and Create playlist is a compact
+  square button under the Playlists heading.
+- Create playlist now opens as a bottom sheet, about six tenths of the screen,
+  scrollable so the fields stay reachable above the keyboard.
+- Watch history thumbnails appear again, derived from the video id when no URL was
+  stored.
+- Thumbnails load faster: the chain starts at the size that always exists, so most
+  cards no longer cost two failed requests first.

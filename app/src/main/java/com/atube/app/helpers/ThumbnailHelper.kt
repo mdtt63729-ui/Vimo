@@ -20,10 +20,17 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
  */
 object ThumbnailHelper {
 
+    /**
+     * hqdefault comes first on purpose: it exists for every video, while
+     * maxresdefault and sddefault only exist for HD uploads. Starting at the top
+     * meant most thumbnails cost two failed round trips before the first hit, which
+     * is what made the feed feel slow. The bigger sizes are still tried, but only
+     * after the one that is guaranteed to answer.
+     */
     val QUALITY_FALLBACK_CHAIN = listOf(
+        "hqdefault",
         "maxresdefault",
         "sddefault",
-        "hqdefault",
         "mqdefault",
         "default",
     )

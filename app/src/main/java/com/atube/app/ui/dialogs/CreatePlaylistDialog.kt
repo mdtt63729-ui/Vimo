@@ -5,21 +5,22 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.setFragmentResult
+import androidx.core.widget.NestedScrollView
 import androidx.lifecycle.lifecycleScope
 import com.atube.app.R
 import com.atube.app.api.PlaylistsHelper
 import com.atube.app.constants.IntentData
 import com.atube.app.databinding.DialogCreatePlaylistBinding
 import com.atube.app.extensions.toastFromMainDispatcher
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
-class CreatePlaylistDialog : DialogFragment() {
+class CreatePlaylistDialog : com.google.android.material.bottomsheet.BottomSheetDialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val binding = DialogCreatePlaylistBinding.inflate(layoutInflater)
 
@@ -103,10 +104,23 @@ class CreatePlaylistDialog : DialogFragment() {
             dialog?.cancel()
         }
 
-        return MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.createPlaylist)
-            .setView(binding.root)
-            .show()
+        // Opens from the bottom as a sheet rather than a centred dialog, so the name
+        // field sits near the keyboard. The content is wrapped in a scroll view so
+        // the fields can be reached even when the keyboard takes the lower half.
+        val scroll = NestedScrollView(requireContext()).apply {
+            isFillViewport = true
+            addView(binding.root)
+        }
+
+        return BottomSheetDialog(requireContext()).apply {
+            setContentView(scroll)
+            behavior.state = BottomSheetBehavior.STATE_EXPANDED
+            behavior.skipCollapsed = true
+            behavior.isFitToContents = false
+            // a little above half the screen, and taller while typing
+            behavior.peekHeight = (resources.displayMetrics.heightPixels * 0.62f).toInt()
+            behavior.expandedOffset = (resources.displayMetrics.heightPixels * 0.12f).toInt()
+        }
     }
 
     companion object {

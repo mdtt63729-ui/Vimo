@@ -22,9 +22,9 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- History, Downloads and Create playlist sit together as one row.
-                     Create playlist used to be a floating button in the corner;
-                     it belongs with the other two actions. -->
+                <!-- History and Downloads are the two destinations. Creating a
+                     playlist is an action on the playlist list below, so it lives
+                     there as a compact square button. -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -56,19 +56,6 @@
                         android:text="@string/downloads"
                         android:textStyle="bold"
                         app:icon="@drawable/ic_download"
-                        app:materialSizeOverlay="@style/SizeOverlay.Material3Expressive.Button.Medium" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/create_playlist"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:ellipsize="marquee"
-                        android:maxLines="1"
-                        android:text="@string/createPlaylist"
-                        android:textStyle="bold"
-                        app:icon="@drawable/ic_add"
                         app:materialSizeOverlay="@style/SizeOverlay.Material3Expressive.Button.Medium" />
 
                 </LinearLayout>
@@ -109,6 +96,24 @@
                             app:iconGravity="textEnd" />
 
                     </LinearLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/create_playlist"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginBottom="10dp"
+                        android:contentDescription="@string/createPlaylist"
+                        android:insetLeft="0dp"
+                        android:insetTop="0dp"
+                        android:insetRight="0dp"
+                        android:insetBottom="0dp"
+                        app:cornerRadius="18dp"
+                        app:icon="@drawable/ic_add"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        app:iconSize="24dp" />
 
                     <LinearLayout
                         android:id="@+id/nothing_here"
