@@ -1,0 +1,7 @@
+Vimo 33.22
+
+- Fetching now shows a shimmering skeleton instead of a plain spinner, and the
+  result card keeps the real shape of the video instead of forcing 16:9.
+- Every format has a Download button. Downloads run through the on-device
+  yt-dlp engine into the same private folders the app already uses, and each one
+  appears in a list right under the link box with live progress and a cancel.

@@ -42,14 +42,16 @@
             tools:text="Video + audio · 42.1 MB" />
     </LinearLayout>
 
-    <TextView
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/formatAction"
+        style="@style/Widget.Material3.Button.TonalButton"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
         android:layout_marginStart="10dp"
-        android:text="@string/fetch_copy"
-        android:textColor="?attr/colorPrimary"
+        android:minWidth="0dp"
+        android:paddingHorizontal="14dp"
+        android:text="@string/fetch_download"
         android:textSize="12sp"
-        android:textStyle="bold" />
+        app:cornerRadius="12dp" />
 
 </LinearLayout>

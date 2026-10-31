@@ -620,4 +620,15 @@
     <string name="fetch_failed">That link could not be read</string>
     <string name="fetch_clipboard_empty">Clipboard is empty</string>
     <string name="fetch_copied">Direct link copied</string>
+
+    <string name="fetch_downloads">Downloads</string>
+    <string name="fetch_download">Download</string>
+    <string name="fetch_cancel">Cancel download</string>
+    <string name="fetch_starting">Starting download…</string>
+    <string name="fetch_downloading">Downloading</string>
+    <string name="fetch_saved">Saved to Downloads</string>
+    <string name="fetch_failed_download">The download did not finish</string>
+    <string name="fetch_cancelled">Cancelled</string>
+    <string name="fetch_best_quality">Best quality</string>
+    <string name="fetch_best_quality_detail">Video + audio · merged automatically</string>
 </resources>

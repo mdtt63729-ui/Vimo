@@ -62,13 +62,103 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <com.google.android.material.loadingindicator.LoadingIndicator
-        android:id="@+id/fetchProgress"
-        android:layout_width="wrap_content"
+    <!-- What the fetch screen shows while yt-dlp is reading the link: the same
+         shimmering blocks the home feed and the player use, shaped like the
+         result that is about to arrive. -->
+    <LinearLayout
+        android:id="@+id/fetchSkeleton"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="32dp"
-        android:visibility="gone" />
+        android:layout_marginTop="16dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <View
+                android:id="@+id/skeletonThumb"
+                android:layout_width="132dp"
+                android:layout_height="74dp" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="74dp"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center_vertical">
+
+                <View
+                    android:id="@+id/skeletonLine1"
+                    android:layout_width="match_parent"
+                    android:layout_height="14dp" />
+
+                <View
+                    android:id="@+id/skeletonLine2"
+                    android:layout_width="180dp"
+                    android:layout_height="12dp"
+                    android:layout_marginTop="8dp" />
+
+                <View
+                    android:id="@+id/skeletonLine3"
+                    android:layout_width="110dp"
+                    android:layout_height="11dp"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <View
+            android:id="@+id/skeletonRow1"
+            android:layout_width="match_parent"
+            android:layout_height="16dp"
+            android:layout_marginTop="22dp" />
+
+        <View
+            android:id="@+id/skeletonRow2"
+            android:layout_width="match_parent"
+            android:layout_height="16dp"
+            android:layout_marginTop="14dp" />
+
+        <View
+            android:id="@+id/skeletonRow3"
+            android:layout_width="match_parent"
+            android:layout_height="16dp"
+            android:layout_marginTop="14dp" />
+
+        <View
+            android:id="@+id/skeletonRow4"
+            android:layout_width="match_parent"
+            android:layout_height="16dp"
+            android:layout_marginTop="14dp" />
+    </LinearLayout>
+
+    <!-- Finished and running downloads live here, right under the link card. -->
+    <LinearLayout
+        android:id="@+id/downloadsSection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/fetch_downloads"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/downloadsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="vertical" />
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/fetchEmpty"

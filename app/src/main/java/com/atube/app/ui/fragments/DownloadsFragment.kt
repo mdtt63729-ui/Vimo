@@ -10,7 +10,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.os.Bundle
 import android.os.IBinder
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewGroup.MarginLayoutParams
 import android.view.inputmethod.EditorInfo
 import androidx.activity.OnBackPressedCallback
@@ -30,9 +32,11 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.atube.app.R
 import com.atube.app.api.ytdlp.YtDlpEngine
+import com.atube.app.api.ytdlp.YtDlpProgress
 import com.atube.app.constants.IntentData
 import com.atube.app.constants.PreferenceKeys
 import com.atube.app.databinding.FragmentDownloadContentBinding
+import com.atube.app.databinding.ItemYtdlpDownloadBinding
 import com.atube.app.databinding.FragmentDownloadsBinding
 import com.atube.app.db.DatabaseHolder.Database
 import com.atube.app.db.obj.Download
@@ -61,18 +65,22 @@ import com.atube.app.ui.models.CommonPlayerViewModel
 import com.atube.app.ui.models.DownloadsViewModel
 import com.atube.app.ui.sheets.BaseBottomSheet
 import com.atube.app.ui.viewholders.DownloadsViewHolder
+import com.atube.app.ui.views.ShimmerHelper
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayoutMediator
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.io.path.fileSize
+import kotlin.math.roundToInt
 
 enum class DownloadTab {
     VIDEO,
@@ -108,13 +116,17 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     private lateinit var adapter: YtDlpFetchAdapter
     private var fetchJob: Job? = null
 
+    private val downloadRows = mutableMapOf<String, ItemYtdlpDownloadBinding>()
+    private val downloadJobs = mutableMapOf<String, Job>()
+    private var currentTitle = ""
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         _binding = FragmentDownloadsBinding.bind(view)
         super.onViewCreated(view, savedInstanceState)
 
         adapter = YtDlpFetchAdapter(
             onVideoClick = { video -> if (video.url.isNotBlank()) fetchLink(video.url) },
-            onFormatClick = { format -> copyStreamUrl(format.url) }
+            onFormatDownload = { format -> startDownload(format) }
         )
         binding.fetchResults.layoutManager = LinearLayoutManager(requireContext())
         binding.fetchResults.adapter = adapter
@@ -130,15 +142,13 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         }
         binding.linkInputLayout.setEndIconOnClickListener { pasteFromClipboard() }
 
+        shimmerSkeleton()
         showEmpty(getString(R.string.fetch_empty_message))
     }
 
-    /**
-     * Kept because MainActivity still calls it while wiring the download service.
-     * This screen no longer hosts the downloaded-file lists, so there is nothing
-     * left to bind.
-     */
     fun bindDownloadService() = Unit
+
+    // ---- fetching -----------------------------------------------------------
 
     private fun startFetch() {
         val input = binding.linkInput.text?.toString()?.trim().orEmpty()
@@ -179,10 +189,6 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         }
     }
 
-    /**
-     * Runs the blocking yt-dlp call off the main thread and paints whichever of
-     * the three states the result belongs to.
-     */
     private fun runFetch(block: () -> List<YtDlpResult>) {
         fetchJob?.cancel()
         showLoading()
@@ -205,22 +211,51 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     }
 
     private fun itemsFromInfo(json: JSONObject): List<YtDlpResult> {
+        val pageUrl = json.optString("webpage_url")
+        val title = json.optString("title").ifBlank { "Untitled" }
+        currentTitle = title
+
+        val formats = json.optJSONArray("formats") ?: JSONArray()
+
+        // the real shape of the video, taken from the first stream that reports it
+        var aspect = 16f / 9f
+        for (i in 0 until formats.length()) {
+            val f = formats.optJSONObject(i) ?: continue
+            val w = f.optInt("width")
+            val h = f.optInt("height")
+            if (w > 0 && h > 0) {
+                aspect = w.toFloat() / h.toFloat()
+                break
+            }
+        }
+
         val out = mutableListOf<YtDlpResult>()
         out += YtDlpResult.Video(
             id = json.optString("id"),
-            title = json.optString("title").ifBlank { "Untitled" },
+            title = title,
             uploader = json.optString("uploader"),
             duration = json.optLong("duration"),
             thumbnail = json.optString("thumbnail"),
             views = 0L,
-            url = json.optString("webpage_url")
+            url = pageUrl,
+            aspect = aspect
         )
 
-        val formats = json.optJSONArray("formats") ?: JSONArray()
+        // one-tap best quality, video and audio merged by the bundled ffmpeg
+        out += YtDlpResult.Format(
+            label = getString(R.string.fetch_best_quality),
+            detail = getString(R.string.fetch_best_quality_detail),
+            directUrl = "",
+            formatId = "bv*+ba/b",
+            pageUrl = pageUrl,
+            isAudio = false
+        )
+
         for (i in 0 until formats.length()) {
             val format = formats.optJSONObject(i) ?: continue
-            val url = format.optString("url")
-            if (url.isBlank()) continue
+            val direct = format.optString("url")
+            val formatId = format.optString("format_id")
+            if (formatId.isBlank()) continue
 
             val ext = format.optString("ext").ifBlank { "file" }
             val resolution = format.optString("resolution").ifBlank { "unknown" }
@@ -236,7 +271,14 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             val size = YtDlpFetchAdapter.formatSize(format.optLong("filesize"))
             val detail = listOf(kind, size).filter { it.isNotBlank() }.joinToString(" · ")
 
-            out += YtDlpResult.Format(label = label, detail = detail, url = url)
+            out += YtDlpResult.Format(
+                label = label,
+                detail = detail,
+                directUrl = direct,
+                formatId = formatId,
+                pageUrl = pageUrl,
+                isAudio = !hasVideo
+            )
         }
         return out
     }
@@ -260,6 +302,113 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         return out
     }
 
+    // ---- downloading --------------------------------------------------------
+
+    /**
+     * Downloads through the same on-device yt-dlp engine that read the link, into
+     * the same private folders A Tube's own downloader uses, so a file fetched
+     * here lands next to everything else at its original quality.
+     */
+    private fun startDownload(format: YtDlpResult.Format) {
+        if (format.pageUrl.isBlank()) return
+
+        val jobId = "vimo_" + System.currentTimeMillis()
+        val directory = DownloadHelper.getDownloadDir(
+            requireContext(),
+            if (format.isAudio) DownloadHelper.AUDIO_DIR else DownloadHelper.VIDEO_DIR
+        )
+
+        val row = ItemYtdlpDownloadBinding.inflate(
+            LayoutInflater.from(requireContext()), binding.downloadsContainer, false
+        )
+        row.downloadTitle.text = currentTitle.ifBlank { format.label }
+        row.downloadProgress.isIndeterminate = true
+        row.downloadStatus.text = getString(R.string.fetch_starting)
+        row.downloadCancel.setOnClickListener { cancelDownload(jobId) }
+
+        binding.downloadsContainer.addView(row.root)
+        binding.downloadsSection.isVisible = true
+        downloadRows[jobId] = row
+
+        downloadJobs[jobId] = viewLifecycleOwner.lifecycleScope.launch {
+            // the engine blocks, so progress is polled from a second coroutine
+            val poller = launch {
+                while (isActive) {
+                    val progress = withContext(Dispatchers.IO) { YtDlpEngine.progress(jobId) }
+                    if (progress != null) {
+                        updateRow(jobId, progress)
+                        if (progress.status in TERMINAL_STATES) break
+                    }
+                    delay(600)
+                }
+            }
+
+            val ok = withContext(Dispatchers.IO) {
+                YtDlpEngine.startDownload(
+                    format.pageUrl, format.formatId, directory.toFile(), jobId
+                )
+            }
+            poller.cancel()
+            finishRow(jobId, ok)
+        }
+    }
+
+    private fun updateRow(jobId: String, progress: YtDlpProgress) {
+        val row = downloadRows[jobId] ?: return
+
+        if (progress.status == "downloading") {
+            row.downloadProgress.isIndeterminate = false
+            row.downloadProgress.progress = progress.percent.roundToInt().coerceIn(0, 100)
+            val percent = progress.percent.roundToInt()
+            val speed = YtDlpFetchAdapter.formatSize(progress.speedBytesPerSecond)
+            row.downloadStatus.text = buildString {
+                append(getString(R.string.fetch_downloading))
+                append(" · ")
+                append(percent)
+                append('%')
+                if (speed.isNotBlank()) {
+                    append(" · ")
+                    append(speed)
+                    append("/s")
+                }
+            }
+        } else {
+            row.downloadStatus.text = progress.message
+        }
+    }
+
+    private fun finishRow(jobId: String, ok: Boolean) {
+        if (_binding == null) return
+        val row = downloadRows[jobId] ?: return
+
+        row.downloadProgress.isIndeterminate = false
+        if (ok) row.downloadProgress.progress = 100
+        row.downloadStatus.text = getString(
+            if (ok) R.string.fetch_saved else R.string.fetch_failed_download
+        )
+        row.downloadCancel.isVisible = false
+
+        YtDlpEngine.cleanup(jobId)
+        downloadJobs.remove(jobId)
+
+        if (ok) {
+            Snackbar.make(binding.root, R.string.fetch_saved, Snackbar.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun cancelDownload(jobId: String) {
+        YtDlpEngine.cancel(jobId)
+        downloadJobs.remove(jobId)?.cancel()
+
+        downloadRows[jobId]?.apply {
+            downloadProgress.isVisible = false
+            downloadStatus.text = getString(R.string.fetch_cancelled)
+            downloadCancel.isVisible = false
+        }
+    }
+
+    // ---- clipboard + states -------------------------------------------------
+
     private fun pasteFromClipboard() {
         val clipboard = requireContext()
             .getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -278,27 +427,34 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         binding.linkInput.setSelection(text.length)
     }
 
-    private fun copyStreamUrl(url: String) {
-        val clipboard = requireContext()
-            .getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-        clipboard?.setPrimaryClip(ClipData.newPlainText("Vimo stream", url))
-        Snackbar.make(binding.root, R.string.fetch_copied, Snackbar.LENGTH_SHORT).show()
+    private fun shimmerSkeleton() {
+        val blocks = listOf(
+            binding.skeletonThumb,
+            binding.skeletonLine1,
+            binding.skeletonLine2,
+            binding.skeletonLine3,
+            binding.skeletonRow1,
+            binding.skeletonRow2,
+            binding.skeletonRow3,
+            binding.skeletonRow4
+        )
+        blocks.forEach { ShimmerHelper.applyShimmer(it, cornerRadiusDp = 10f) }
     }
 
     private fun showLoading() {
-        binding.fetchProgress.isVisible = true
+        binding.fetchSkeleton.isVisible = true
         binding.fetchEmpty.isVisible = false
         binding.fetchResults.isVisible = false
     }
 
     private fun showResults() {
-        binding.fetchProgress.isVisible = false
+        binding.fetchSkeleton.isVisible = false
         binding.fetchEmpty.isVisible = false
         binding.fetchResults.isVisible = true
     }
 
     private fun showEmpty(message: String) {
-        binding.fetchProgress.isVisible = false
+        binding.fetchSkeleton.isVisible = false
         binding.fetchResults.isVisible = false
         binding.fetchEmpty.isVisible = true
         binding.fetchEmptyMessage.text = message
@@ -307,8 +463,15 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     override fun onDestroyView() {
         fetchJob?.cancel()
         fetchJob = null
+        downloadJobs.values.forEach { it.cancel() }
+        downloadJobs.clear()
+        downloadRows.clear()
         super.onDestroyView()
         _binding = null
+    }
+
+    private companion object {
+        val TERMINAL_STATES = setOf("finished", "error", "cancelled")
     }
 }
 

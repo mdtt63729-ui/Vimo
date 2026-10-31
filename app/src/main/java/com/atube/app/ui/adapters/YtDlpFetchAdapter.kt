@@ -19,19 +19,27 @@ sealed class YtDlpResult {
         val duration: Long,
         val thumbnail: String,
         val views: Long,
-        val url: String
+        val url: String,
+        /** width / height of the real video, so the card keeps its shape. */
+        val aspect: Float = 16f / 9f
     ) : YtDlpResult()
 
     data class Format(
         val label: String,
         val detail: String,
-        val url: String
+        /** Direct stream URL, used for copying. */
+        val directUrl: String,
+        /** yt-dlp format selector, used for the actual download. */
+        val formatId: String,
+        /** The page the format came from. */
+        val pageUrl: String,
+        val isAudio: Boolean
     ) : YtDlpResult()
 }
 
 class YtDlpFetchAdapter(
     private val onVideoClick: (YtDlpResult.Video) -> Unit,
-    private val onFormatClick: (YtDlpResult.Format) -> Unit
+    private val onFormatDownload: (YtDlpResult.Format) -> Unit
 ) : ListAdapter<YtDlpResult, RecyclerView.ViewHolder>(Diff) {
 
     override fun getItemViewType(position: Int): Int =
@@ -67,6 +75,18 @@ class YtDlpFetchAdapter(
             } else {
                 "Tap to load every available format"
             }
+
+            // Keep the thumbnail in the shape of the real video instead of forcing
+            // every card into 16:9.
+            val density = binding.root.resources.displayMetrics.density
+            val width = (132 * density).toInt()
+            val aspect = item.aspect.takeIf { it > 0.2f && it < 5f } ?: (16f / 9f)
+            val height = (width / aspect).toInt().coerceIn((56 * density).toInt(), (240 * density).toInt())
+            binding.resultThumbnail.layoutParams = binding.resultThumbnail.layoutParams.apply {
+                this.width = width
+                this.height = height
+            }
+
             ImageHelper.loadImageHighQuality(item.thumbnail, binding.resultThumbnail)
             binding.root.setOnClickListener { onVideoClick(item) }
         }
@@ -78,7 +98,8 @@ class YtDlpFetchAdapter(
         fun bind(item: YtDlpResult.Format) {
             binding.formatLabel.text = item.label
             binding.formatDetail.text = item.detail
-            binding.root.setOnClickListener { onFormatClick(item) }
+            binding.root.setOnClickListener { onFormatDownload(item) }
+            binding.formatAction.setOnClickListener { onFormatDownload(item) }
         }
     }
 
@@ -117,7 +138,8 @@ class YtDlpFetchAdapter(
         override fun areItemsTheSame(oldItem: YtDlpResult, newItem: YtDlpResult): Boolean {
             return when {
                 oldItem is YtDlpResult.Video && newItem is YtDlpResult.Video -> oldItem.id == newItem.id
-                oldItem is YtDlpResult.Format && newItem is YtDlpResult.Format -> oldItem.url == newItem.url
+                oldItem is YtDlpResult.Format && newItem is YtDlpResult.Format ->
+                    oldItem.formatId == newItem.formatId && oldItem.pageUrl == newItem.pageUrl
                 else -> false
             }
         }
