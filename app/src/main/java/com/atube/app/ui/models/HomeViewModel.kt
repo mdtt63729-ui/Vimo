@@ -28,6 +28,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 
 class HomeViewModel : ViewModel() {
@@ -66,6 +67,7 @@ class HomeViewModel : ViewModel() {
      * list straight back instead of fetching it again and flashing the skeletons.
      */
     private val categoryCache = mutableMapOf<String, List<HomeFeedItem>>()
+
     private var loadMoreJob: Job? = null
 
     // Recommendation engine coordinator
@@ -134,7 +136,21 @@ class HomeViewModel : ViewModel() {
         recFeedJob?.cancel()
         recFeedJob = viewModelScope.launch {
             try {
-                val state = homeFeedCoordinator.loadInitialFeed(region, forceRefresh)
+                // A dead or hanging instance used to leave the skeleton running
+                // for ever. Twenty seconds is enough for a real request; after
+                // that the screen shows an error instead of pretending to load.
+                val state = withTimeoutOrNull(LOAD_TIMEOUT_MS) {
+                    homeFeedCoordinator.loadInitialFeed(region, forceRefresh)
+                }
+                if (state == null) {
+                    feedState.postValue(
+                        HomeFeedState(
+                            status = HomeUiStatus.ERROR,
+                            selectedCategory = selectedCategory.value ?: "All"
+                        )
+                    )
+                    return@launch
+                }
                 // If the API returned items, emit SUCCESS
                 // If it returned genuinely empty, emit EMPTY
                 if (state.items.isNotEmpty()) {
@@ -233,7 +249,18 @@ class HomeViewModel : ViewModel() {
         recFeedJob?.cancel()
         recFeedJob = viewModelScope.launch {
             try {
-                val state = homeFeedCoordinator.loadCategory(category, region)
+                val state = withTimeoutOrNull(LOAD_TIMEOUT_MS) {
+                    homeFeedCoordinator.loadCategory(category, region)
+                }
+                if (state == null) {
+                    feedState.postValue(
+                        HomeFeedState(
+                            status = HomeUiStatus.ERROR,
+                            selectedCategory = category
+                        )
+                    )
+                    return@launch
+                }
                 // Stale request protection: only update if this category is still selected
                 if (selectedCategory.value != category) return@launch
                 if (state.items.isNotEmpty()) {
@@ -363,6 +390,8 @@ class HomeViewModel : ViewModel() {
     }
 
     companion object {
+        /** How long a feed request may run before the screen gives up. */
+        private const val LOAD_TIMEOUT_MS = 20_000L
         private const val UNUSUAL_LOAD_TIME_MS = 10000L
         private const val FEATURED = "featured"
         private const val WATCHING = "watching"

@@ -1,0 +1,6 @@
+Vimo 33.34
+
+- The floating navigation bar is switched off; the standard bottom navigation
+  bar is used again.
+- The home feed can no longer spin on its skeleton for ever: a request that does
+  not answer within 20 seconds now shows an error instead.

@@ -431,7 +431,11 @@ class MainActivity : AbstractPlayerHostActivity() {
      * the look without touching the navigation graph.
      */
     private fun setUpNavBarMode() {
-        val useFloatingBar = PreferenceHelper.getBoolean(PreferenceKeys.FLOATING_NAV_BAR, true)
+        // The custom floating bar is switched off for now: it kept getting in the
+        // way of the content and the labels were being clipped. The standard
+        // Material bottom bar below is the one that ships, and the preference is
+        // ignored until the floating design is finished.
+        val useFloatingBar = false
 
         if (!useFloatingBar) {
             binding.floatingNav.visibility = View.GONE
