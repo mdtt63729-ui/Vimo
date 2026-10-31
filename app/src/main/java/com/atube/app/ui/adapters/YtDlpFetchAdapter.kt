@@ -109,8 +109,11 @@ class YtDlpFetchAdapter(
                                 .coerceIn(0.4f, 2.5f)
                             binding.resultThumbnail.layoutParams =
                                 binding.resultThumbnail.layoutParams.apply {
-                                    width = cardWidth
-                                    height = (cardWidth / ratio).toInt()
+                                    // explicit receiver: `width`/`height` also exist as
+                                    // locals in this function, and a local wins over the
+                                    // implicit receiver inside apply { }
+                                    this.width = cardWidth
+                                    this.height = (cardWidth / ratio).toInt()
                                         .coerceIn((56 * density).toInt(), (240 * density).toInt())
                                 }
                         }
