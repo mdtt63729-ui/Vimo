@@ -1,0 +1,9 @@
+Vimo 33.48
+
+- Downloads can be deleted from the fetch screen: the cross on a finished row
+  removes the entry and the file.
+- A download row shows its thumbnail, title, percent, speed and, once saved, the
+  file size.
+- Quality chips select properly again, and the Video / Audio switch eases across
+  instead of snapping.
+- The downloads block on the fetch screen is more compact.

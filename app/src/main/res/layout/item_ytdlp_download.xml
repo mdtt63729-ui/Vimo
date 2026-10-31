@@ -7,7 +7,7 @@
     android:layout_marginBottom="8dp"
     android:background="@drawable/bg_card"
     android:orientation="vertical"
-    android:paddingHorizontal="14dp"
+    android:paddingHorizontal="12dp"
     android:paddingVertical="10dp">
 
     <LinearLayout
@@ -16,17 +16,43 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/downloadTitle"
+        <ImageView
+            android:id="@+id/downloadThumb"
+            android:layout_width="64dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_thumbnail"
+            android:contentDescription="@null"
+            android:scaleType="centerCrop" />
+
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
             android:layout_weight="1"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="?attr/colorOnSurface"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            tools:text="skibidi toilet 83" />
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/downloadTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="skibidi toilet 83" />
+
+            <TextView
+                android:id="@+id/downloadSize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="11sp"
+                tools:text="12.4 MB of 48.0 MB · 1.2 MB/s" />
+        </LinearLayout>
 
         <ImageButton
             android:id="@+id/downloadCancel"
@@ -44,7 +70,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         app:trackCornerRadius="3dp"
-        app:trackThickness="5dp" />
+        app:trackThickness="4dp" />
 
     <TextView
         android:id="@+id/downloadStatus"

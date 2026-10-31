@@ -685,4 +685,5 @@
     <string name="tg_join">Join Telegram</string>
     <string name="tg_later">Maybe Later</string>
     <string name="tg_must_join">Join the Telegram channel to continue</string>
+    <string name="fetch_deleted">Download deleted</string>
 </resources>

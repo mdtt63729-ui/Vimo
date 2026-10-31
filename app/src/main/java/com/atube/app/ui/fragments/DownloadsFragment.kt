@@ -470,6 +470,9 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             LayoutInflater.from(requireContext()), binding.downloadsContainer, false
         )
         row.downloadTitle.text = currentTitle.ifBlank { format.label }
+        fetchedVideo?.thumbnail?.takeIf { it.isNotBlank() }?.let {
+            ImageHelper.loadImageHighQuality(it, row.downloadThumb)
+        }
         row.downloadProgress.isIndeterminate = true
         row.downloadStatus.text = getString(R.string.fetch_starting)
         row.downloadCancel.setOnClickListener { cancelDownload(jobId) }
@@ -521,6 +524,37 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         }
     }
 
+    /** Removes a finished download: the row, the database entry and the file. */
+    private fun deleteDownload(jobId: String) {
+        val row = downloadRows[jobId] ?: return
+        val videoId = downloadedIds[jobId]
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                if (videoId != null) {
+                    runCatching {
+                        val dao = Database.downloadDao()
+                        val entry = dao.getDownloadById(videoId)
+                        entry?.downloadItems?.forEach { item ->
+                            runCatching { java.io.File(item.path.toString()).delete() }
+                            runCatching { dao.deleteDownloadItemById(item.id) }
+                        }
+                        entry?.let { runCatching { dao.deleteDownload(it.download) } }
+                    }
+                }
+            }
+            row.root.animate().alpha(0f).setDuration(160).withEndAction {
+                binding.downloadsContainer.removeView(row.root)
+                if (binding.downloadsContainer.childCount == 0) {
+                    binding.downloadsSection.isVisible = false
+                }
+            }.start()
+            downloadRows.remove(jobId)
+            downloadedIds.remove(jobId)
+            Snackbar.make(binding.root, R.string.fetch_deleted, Snackbar.LENGTH_SHORT).show()
+        }
+    }
+
     private fun updateRow(jobId: String, progress: YtDlpProgress) {
         val row = downloadRows[jobId] ?: return
 
@@ -529,6 +563,15 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             row.downloadProgress.progress = progress.percent.roundToInt().coerceIn(0, 100)
             val percent = progress.percent.roundToInt()
             val speed = YtDlpFetchAdapter.formatSize(progress.speedBytesPerSecond)
+            row.downloadSize.text = buildString {
+                append(percent)
+                append('%')
+                if (speed.isNotBlank()) {
+                    append(" · ")
+                    append(speed)
+                    append("/s")
+                }
+            }
             row.downloadStatus.text = buildString {
                 append(getString(R.string.fetch_downloading))
                 append(" · ")
@@ -554,7 +597,10 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         row.downloadStatus.text = getString(
             if (ok) R.string.fetch_saved else R.string.fetch_failed_download
         )
-        row.downloadCancel.isVisible = false
+        row.downloadCancel.isVisible = true
+        row.downloadCancel.setImageResource(R.drawable.ic_close)
+        row.downloadCancel.setOnClickListener { deleteDownload(jobId) }
+        if (ok) row.downloadStatus.text = getString(R.string.fetch_saved)
 
         YtDlpEngine.cleanup(jobId)
         downloadJobs.remove(jobId)
@@ -831,8 +877,20 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         )
 
         val formats = if (audioMode) audioFormats else videoFormats
-        selectedFormat = formats.firstOrNull()
+        // keep what the user picked; only fall back when it is not in this list
+        if (formats.none { it == selectedFormat }) selectedFormat = formats.firstOrNull()
 
+        val row = binding.qualityContainer
+        row.animate().cancel()
+        row.animate().alpha(0f).setDuration(90).withEndAction {
+            fillQualityRow()
+            row.animate().alpha(1f).setDuration(160).start()
+        }.start()
+    }
+
+    private fun fillQualityRow() {
+        val density = resources.displayMetrics.density
+        val formats = if (audioMode) audioFormats else videoFormats
         binding.qualityContainer.removeAllViews()
         formats.forEach { format ->
             val chip = TextView(requireContext()).apply {
@@ -853,7 +911,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                 )
                 setOnClickListener {
                     selectedFormat = format
-                    renderMode()
+                    fillQualityRow()
                 }
                 val params = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -865,6 +923,9 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             binding.qualityContainer.addView(chip)
         }
         binding.downloadButton.isEnabled = formats.isNotEmpty()
+        // the capsule switch itself eases across instead of snapping
+        binding.videoMode.animate().alpha(if (audioMode) 0.55f else 1f).setDuration(160).start()
+        binding.audioMode.animate().alpha(if (audioMode) 1f else 0.55f).setDuration(160).start()
     }
 
     override fun onDestroyView() {
