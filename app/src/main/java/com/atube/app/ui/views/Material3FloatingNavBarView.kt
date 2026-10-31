@@ -11,6 +11,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -56,22 +57,12 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     private val density = resources.displayMetrics.density
     private fun dp(value: Float) = value * density
 
-    private val surfaceColor = MaterialColors.getColor(
-        this, com.google.android.material.R.attr.colorSurfaceContainerHigh,
-        0xFFF0EDF6.toInt()
-    )
-    private val indicatorColor = MaterialColors.getColor(
-        this, com.google.android.material.R.attr.colorPrimaryContainer,
-        0xFFD0C5E8.toInt()
-    )
-    private val selectedContentColor = MaterialColors.getColor(
-        this, com.google.android.material.R.attr.colorOnPrimaryContainer,
-        0xFF342B49.toInt()
-    )
-    private val unselectedContentColor = MaterialColors.getColor(
-        this, com.google.android.material.R.attr.colorOnSurfaceVariant,
-        0xFF494551.toInt()
-    )
+    // The PRD fixes the palette rather than taking it from the theme, so the bar
+    // keeps its dark premium look in both light and dark mode.
+    private val surfaceColor = 0xFF191917.toInt()      // container
+    private val indicatorColor = 0xFF3B2B23.toInt()    // active capsule
+    private val selectedContentColor = 0xFFFFAB88.toInt()
+    private val unselectedContentColor = 0xFFBEB6AE.toInt()
 
     private val indicatorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = indicatorColor }
     private val indicatorRect = RectF()
@@ -96,8 +87,8 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     private val labelSidePadding = dp(10f)
     private val outerInset = dp(6f)
     private val pillWidth = dp(54f)
-    private val pillHeight = dp(30f)
-    private val cornerRadius = dp(36f)
+    private val pillHeight = dp(32f)
+    private val cornerRadius = dp(24f)
     private val labelTextSize = 11.5f
 
     /** Total height of the icon + gap + label block, used to centre the pill. */
@@ -139,6 +130,17 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
                 isFocusable = true
                 contentDescription = destination.label
                 setOnClickListener { select(index, notify = true) }
+                // subtle press feedback, the way a premium bar answers a touch
+                setOnTouchListener { view, event ->
+                    when (event.actionMasked) {
+                        MotionEvent.ACTION_DOWN ->
+                            view.animate().scaleX(0.94f).scaleY(0.94f).setDuration(90L).start()
+                        MotionEvent.ACTION_UP,
+                        MotionEvent.ACTION_CANCEL ->
+                            view.animate().scaleX(1f).scaleY(1f).setDuration(140L).start()
+                    }
+                    false
+                }
             }
 
             val icon = ImageView(context).apply {
@@ -370,9 +372,9 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
     }
 
     companion object {
-        /** Under-damped on purpose: 0.55 overshoots the slot and eases back. */
-        private const val STIFFNESS = 240f
-        private const val DAMPING = 0.55f
+        /** The PRD's spring: a quick, slightly under-damped glide. */
+        private const val STIFFNESS = 420f
+        private const val DAMPING = 0.78f
 
         /** How far the pill stretches horizontally per unit of travel speed. */
         private const val STRETCH_FACTOR = 0.0018f

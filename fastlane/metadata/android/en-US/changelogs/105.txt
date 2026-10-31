@@ -1,0 +1,8 @@
+Vimo 33.32
+
+- Floating navigation bar redesigned to the PRD: dark premium capsule in
+  #191917, active capsule #3B2B23, active content #FFAB88, inactive #BEB6AE,
+  24dp corners, 16dp side margins and a subtle shadow.
+- Spring retuned to the specified damping 0.78 / stiffness 420, with a subtle
+  press scale on each tab.
+- Home, Downloader and Library icons redrawn as one consistent 24dp set.
