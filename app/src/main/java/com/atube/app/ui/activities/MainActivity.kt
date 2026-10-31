@@ -450,6 +450,17 @@ class MainActivity : AbstractPlayerHostActivity() {
         binding.bottomNav.visibility = View.GONE
         updateBottomBarKeyFrames()
 
+        // The floating bar sits on top of the content instead of pushing it up, so
+        // the last row of a list would end up underneath it. Inset the fragment
+        // container by the bar's height plus its bottom margin.
+        val inset = ((72 + 28) * resources.displayMetrics.density).toInt()
+        binding.fragment.setPadding(
+            binding.fragment.paddingLeft,
+            binding.fragment.paddingTop,
+            binding.fragment.paddingRight,
+            inset
+        )
+
         // keep the pill in step with navigation coming from anywhere else
         navController.addOnDestinationChangedListener { _, destination, _ ->
             val index = floatingDestinations.indexOf(destination.id)

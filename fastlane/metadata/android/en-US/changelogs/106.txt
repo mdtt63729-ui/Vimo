@@ -1,0 +1,8 @@
+Vimo 33.33
+
+- The navigation bar's icons and labels now change colour gradually with the
+  sliding capsule instead of snapping.
+- Turning off animations in Android's accessibility settings now switches the
+  bar to instant selection.
+- Lists no longer disappear under the floating bar: the content area is inset by
+  the bar's height.

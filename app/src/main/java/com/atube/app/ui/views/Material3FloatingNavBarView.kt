@@ -5,10 +5,12 @@ import com.atube.app.R
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.provider.Settings
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.MotionEvent
@@ -204,7 +206,7 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
                 if (i == selected) "${destinations[i].label}, selected" else destinations[i].label
         }
 
-        if (animate) {
+        if (animate && !animationsDisabled()) {
             spring.animateToFinalPosition(safeIndex.toFloat())
         } else {
             spring.cancel()
@@ -348,23 +350,47 @@ class Material3FloatingNavBarView @JvmOverloads constructor(
             val expand = (1f - abs(progress - i)).coerceIn(0f, 1f)
             val emphasis = expand * expand * (3f - 2f * expand)
 
+            // The tint is blended along the same spring value that moves the
+            // capsule, so the colour arrives with the pill instead of snapping the
+            // moment the selection changes.
+            val tint = blendColor(unselectedContentColor, selectedContentColor, emphasis)
+
             iconViews[i].apply {
                 val scale = 1f + 0.10f * emphasis
                 scaleX = scale
                 scaleY = scale
-                imageTintList = ColorStateList.valueOf(
-                    if (i == selected) selectedContentColor else unselectedContentColor
-                )
+                imageTintList = ColorStateList.valueOf(tint)
             }
 
             labelViews[i].apply {
                 alpha = 0.72f + 0.28f * emphasis
-                setTextColor(
-                    if (i == selected) selectedContentColor else unselectedContentColor
-                )
+                setTextColor(tint)
             }
         }
     }
+
+    /** Linear blend of two ARGB colours; t runs 0..1. */
+    private fun blendColor(from: Int, to: Int, t: Float): Int {
+        val f = t.coerceIn(0f, 1f)
+        return Color.argb(
+            (Color.alpha(from) + (Color.alpha(to) - Color.alpha(from)) * f).toInt(),
+            (Color.red(from) + (Color.red(to) - Color.red(from)) * f).toInt(),
+            (Color.green(from) + (Color.green(to) - Color.green(from)) * f).toInt(),
+            (Color.blue(from) + (Color.blue(to) - Color.blue(from)) * f).toInt()
+        )
+    }
+
+    /**
+     * Android's "remove animations" accessibility setting, or a developer option
+     * that scales animations to zero, should turn the spring off entirely.
+     */
+    private fun animationsDisabled(): Boolean = runCatching {
+        Settings.Global.getFloat(
+            context.contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE,
+            1f
+        ) == 0f
+    }.getOrDefault(false)
 
     override fun onDetachedFromWindow() {
         spring.cancel()
