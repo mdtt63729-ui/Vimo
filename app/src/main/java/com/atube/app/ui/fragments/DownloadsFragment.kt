@@ -15,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.MarginLayoutParams
 import android.view.inputmethod.EditorInfo
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import com.atube.app.helpers.ImageHelper
