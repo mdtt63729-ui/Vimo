@@ -833,21 +833,28 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         }
         blocks.forEach { it.background = shape.constantState?.newDrawable()?.mutate() }
 
-        binding.fetchSkeleton.animate().cancel()
-        binding.fetchSkeleton.alpha = 1f
-        binding.fetchSkeleton.animate()
-            .alpha(0.45f)
-            .setDuration(700L)
-            .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
-            .withEndAction {
+        val pulse = object : Runnable {
+            override fun run() {
+                if (_binding == null) return
+                binding.fetchSkeleton.animate().cancel()
                 binding.fetchSkeleton.animate()
-                    .alpha(1f)
+                    .alpha(0.45f)
                     .setDuration(700L)
                     .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
-                    .withEndAction { pulseSkeleton() }
+                    .withEndAction {
+                        if (_binding == null) return@withEndAction
+                        binding.fetchSkeleton.animate()
+                            .alpha(1f)
+                            .setDuration(700L)
+                            .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
+                            .withEndAction(this)
+                            .start()
+                    }
                     .start()
             }
-            .start()
+        }
+        binding.fetchSkeleton.alpha = 1f
+        pulse.run()
     }
 
     private fun showLoading() {
@@ -1595,23 +1602,4 @@ class PlaylistDownloadsFragmentPage : Fragment(R.layout.fragment_download_conten
         }
     }
 
-    /** Keeps the skeleton breathing with a single animator while it is showing. */
-    private fun pulseSkeleton() {
-        if (_binding == null) return
-        binding.fetchSkeleton.animate().cancel()
-        binding.fetchSkeleton.animate()
-            .alpha(0.45f)
-            .setDuration(700L)
-            .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
-            .withEndAction {
-                if (_binding == null) return@withEndAction
-                binding.fetchSkeleton.animate()
-                    .alpha(1f)
-                    .setDuration(700L)
-                    .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
-                    .withEndAction { pulseSkeleton() }
-                    .start()
-            }
-            .start()
-    }
 }
