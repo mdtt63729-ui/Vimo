@@ -1,0 +1,6 @@
+Vimo 33.55
+
+- The quality capsules are a custom BouncyChip: no ripple, it answers with its own
+  spring. Press compresses it to 0.94; releasing while selected overshoots to 1.06
+  and settles back, so it reads as a bounce. Colours, weight and the icon ride
+  along on softer springs.

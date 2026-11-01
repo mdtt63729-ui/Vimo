@@ -941,31 +941,22 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         val formats = if (audioMode) audioFormats else videoFormats
         binding.qualityContainer.removeAllViews()
         formats.forEach { format ->
-            val chip = TextView(requireContext()).apply {
+            // The chip paints and animates itself; only the label and the state are
+            // set here, so nothing fights its own spring.
+            val chip = com.atube.app.ui.views.BouncyChip(requireContext()).apply {
                 text = format.label
-                textSize = 13f
-                gravity = Gravity.CENTER
-                setPadding(
-                    (16 * density).toInt(), (10 * density).toInt(),
-                    (16 * density).toInt(), (10 * density).toInt()
-                )
-                setBackgroundResource(
-                    if (format == selectedFormat) R.drawable.bg_capsule_selected
-                    else R.drawable.bg_capsule
-                )
-                setTextColor(
-                    if (format == selectedFormat) Color.WHITE
-                    else ContextCompat.getColor(requireContext(), R.color.dl_ink)
-                )
+                isSelected = format == selectedFormat
                 setOnClickListener {
                     selectedFormat = format
+                    // let the tapped chip bounce, then restate the row
+                    (it as? com.atube.app.ui.views.BouncyChip)?.isSelected = true
                     fillQualityRow()
                 }
                 val params = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                params.marginEnd = (8 * density).toInt()
+                params.marginEnd = (6 * density).toInt()
                 layoutParams = params
             }
             binding.qualityContainer.addView(chip)
