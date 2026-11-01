@@ -437,7 +437,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             // a video-only stream is not offered as its own chip: the "Best
             // available" row already downloads picture plus sound, and a silent
             // quality in the list only confuses the choice
-            if (hasVideo && !hasAudio) return@forEach
+            if (hasVideo && !hasAudio) continue
 
             out += YtDlpResult.Format(
                 label = label,
