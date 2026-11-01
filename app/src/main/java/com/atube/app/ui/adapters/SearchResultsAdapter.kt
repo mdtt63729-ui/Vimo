@@ -97,6 +97,9 @@ class SearchResultsAdapter(
 
             thumbnailDuration.setFormattedDuration(item.duration, item.isShort, item.uploaded)
             videoTitle.text = item.title
+            moreButton.setOnClickListener {
+                com.atube.app.helpers.VideoMenuHelper.show(it, item.toStreamItem())
+            }
 
             videoInfo.text = TextUtils.formatViewsString(root.context, item.views, item.uploaded)
             videoInfo.isVisible = !videoInfo.text.isNullOrEmpty()

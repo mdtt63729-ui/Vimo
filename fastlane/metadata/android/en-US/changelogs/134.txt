@@ -1,0 +1,6 @@
+Vimo 33.61
+
+- The Downloader reads properly in dark mode: its capsules, cards and text follow
+  the theme instead of using fixed light colours.
+- The three-dot is visible again on home cards, and it now appears on search
+  results and on the player's suggestions too.

@@ -100,6 +100,10 @@ class VideosAdapter(
                 }
             }
 
+            holder.binding.moreButton.setOnClickListener {
+                com.atube.app.helpers.VideoMenuHelper.show(it, video)
+            }
+
             CoroutineScope(Dispatchers.IO).launch {
                 DeArrowUtil.deArrowVideoId(videoId)?.let { (title, thumbnail) ->
                     withContext(Dispatchers.Main) {
