@@ -1,0 +1,6 @@
+Vimo 33.56
+
+- Quality chips sit four to a row with a movie or music icon, and switching Video /
+  Audio cross-fades the list: the old one fades and lifts away, the new one fades in
+  from below.
+- The Download button's label cross-fades too.

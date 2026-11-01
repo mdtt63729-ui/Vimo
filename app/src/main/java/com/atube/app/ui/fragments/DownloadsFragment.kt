@@ -928,43 +928,105 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         // keep what the user picked; only fall back when it is not in this list
         if (formats.none { it == selectedFormat }) selectedFormat = formats.firstOrNull()
 
-        val row = binding.qualityContainer
-        row.animate().cancel()
-        row.animate().alpha(0f).setDuration(90).withEndAction {
-            fillQualityRow()
-            row.animate().alpha(1f).setDuration(160).start()
-        }.start()
+        swapQualityList()
     }
 
+    /**
+     * Switching Video/Audio swaps the qualities the way a cross-fade does: the old
+     * row fades and lifts away, the new one fades in from below while its height
+     * grows, so the block never snaps to a different size.
+     */
+    private fun swapQualityList() {
+        val row = binding.qualityContainer
+        val lift = row.height / 8f
+        row.animate().cancel()
+
+        row.animate()
+            .alpha(0f)
+            .translationY(-lift)
+            .setDuration(170L)
+            .withEndAction {
+                fillQualityRow()
+                val drop = row.height / 8f
+                row.translationY = drop
+                row.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setDuration(300L)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .start()
+            }
+            .start()
+    }
+
+    /** Four chips a row, 6dp apart, each carrying its own leading icon. */
     private fun fillQualityRow() {
         val density = resources.displayMetrics.density
         val formats = if (audioMode) audioFormats else videoFormats
-        binding.qualityContainer.removeAllViews()
-        formats.forEach { format ->
-            // The chip paints and animates itself; only the label and the state are
-            // set here, so nothing fights its own spring.
-            val chip = com.atube.app.ui.views.BouncyChip(requireContext()).apply {
-                text = format.label
-                isSelected = format == selectedFormat
-                setOnClickListener {
-                    selectedFormat = format
-                    // let the tapped chip bounce, then restate the row
-                    (it as? com.atube.app.ui.views.BouncyChip)?.isSelected = true
-                    fillQualityRow()
-                }
-                val params = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
+        val container = binding.qualityContainer
+        container.removeAllViews()
+
+        val iconRes = if (audioMode) R.drawable.ic_music_note else R.drawable.ic_movie
+        val icon = ContextCompat.getDrawable(requireContext(), iconRes)
+            ?.mutate()
+            ?.apply { setTint(ContextCompat.getColor(requireContext(), R.color.dl_muted)) }
+
+        formats.chunked(4).forEach { rowFormats ->
+            val row = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                params.marginEnd = (6 * density).toInt()
-                layoutParams = params
             }
-            binding.qualityContainer.addView(chip)
+            rowFormats.forEach { format ->
+                val chip = com.atube.app.ui.views.BouncyChip(requireContext()).apply {
+                    text = format.label
+                    isSelected = format == selectedFormat
+                    if (icon != null) {
+                        setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
+                        compoundDrawablePadding = (6 * density).toInt()
+                    }
+                    setOnClickListener {
+                        selectedFormat = format
+                        (it as? com.atube.app.ui.views.BouncyChip)?.isSelected = true
+                        fillQualityRow()
+                    }
+                    val params = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    params.marginEnd = (6 * density).toInt()
+                    layoutParams = params
+                }
+                row.addView(chip)
+            }
+            container.addView(row)
         }
+
         binding.downloadButton.isEnabled = formats.isNotEmpty()
+        crossFadeDownloadLabel()
+
         // the capsule switch itself eases across instead of snapping
         binding.videoMode.animate().alpha(if (audioMode) 0.55f else 1f).setDuration(160).start()
         binding.audioMode.animate().alpha(if (audioMode) 1f else 0.55f).setDuration(160).start()
+    }
+
+    /** The button's label cross-fades instead of swapping in a single frame. */
+    private fun crossFadeDownloadLabel() {
+        val label = if (audioMode) {
+            getString(R.string.dl_download_audio)
+        } else {
+            selectedFormat?.let { getString(R.string.dl_download_quality, it.label) }
+                ?: getString(R.string.dl_download)
+        }
+        val button = binding.downloadButton
+        if (button.text == label) return
+        button.animate().cancel()
+        button.animate().alpha(0f).setDuration(140L).withEndAction {
+            button.text = label
+            button.animate().alpha(1f).setDuration(210L).start()
+        }.start()
     }
 
     override fun onDestroyView() {

@@ -689,4 +689,6 @@
     <string name="menu_channel_blocked">Channel blocked from recommendations</string>
     <string name="fetch_play">Play</string>
     <string name="fetch_delete">Delete</string>
+    <string name="dl_download_quality">↓   Download %1$s</string>
+    <string name="dl_download_audio">↓   Download MP3</string>
 </resources>
