@@ -1,0 +1,4 @@
+Vimo 33.75
+
+- When the download engine gives up, the file is pulled straight from the stream's own
+  URL instead of the job ending with "did not finish".

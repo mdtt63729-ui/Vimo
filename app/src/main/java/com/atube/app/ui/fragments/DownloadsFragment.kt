@@ -542,9 +542,25 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                         format.directUrl, "direct", directory.toFile(), jobId, headers
                     )
                 } else {
-                    YtDlpEngine.startDownload(
+                    val viaEngine = YtDlpEngine.startDownload(
                         format.pageUrl, format.formatId, directory.toFile(), jobId
                     )
+                    // The engine can extract fine and still fail to fetch: YouTube
+                    // refuses its downloader on many networks. Every format carries the
+                    // stream's own URL, so when the engine gives up the file is pulled
+                    // straight from that URL instead of failing outright.
+                    if (viaEngine != null) {
+                        viaEngine
+                    } else if (format.directUrl.isNotBlank()) {
+                        val headers = com.atube.app.api.muso.MusoStreamResolver
+                            .headersFor(format.directUrl)
+                            .let { map ->
+                                if (map.isEmpty()) "" else org.json.JSONObject(map as Map<*, *>).toString()
+                            }
+                        YtDlpEngine.startDownload(
+                            format.directUrl, "direct", directory.toFile(), jobId, headers
+                        )
+                    } else null
                 }
             }
             poller.cancel()
