@@ -429,7 +429,10 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             // audio is what the video tab promises: 1080p plus the best audio there
             // is. yt-dlp merges the two with the bundled ffmpeg, so the file that
             // lands on disk is a normal video with sound.
-            val selector = if (hasVideo && !hasAudio) "$formatId+bestaudio" else formatId
+            // pairing a video-only stream with bestaudio needs ffmpeg to merge them;
+            // asking for the pair without it is what left the download unfinished
+            val selector = if (hasVideo && !hasAudio && canMerge) "$formatId+bestaudio"
+            else formatId
 
             out += YtDlpResult.Format(
                 label = label,
@@ -1036,9 +1039,10 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             val row = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.HORIZONTAL
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
+                setPadding(0, 0, 0, (6 * density).toInt())
             }
             rowFormats.forEach { format ->
                 // inflated, then configured step by step: chaining apply() on the cast

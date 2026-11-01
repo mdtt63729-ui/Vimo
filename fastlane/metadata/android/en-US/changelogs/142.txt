@@ -1,0 +1,6 @@
+Vimo 33.69
+
+- The quality chips are visible and selectable again: each one paints its own capsule
+  as it is built instead of waiting to be attached.
+- Downloading a video-only stream no longer asks for a merge that cannot happen, which
+  is what left downloads unfinished.

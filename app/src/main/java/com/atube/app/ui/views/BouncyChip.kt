@@ -47,6 +47,23 @@ class BouncyChip @JvmOverloads constructor(
             gravity = Gravity.CENTER
             isClickable = true
             isFocusable = true
+            // painted straight away with plain colours; theme attributes are not read
+            // here, which is what used to crash, and the chip is never invisible
+            density = resources.displayMetrics.density
+            val shape = GradientDrawable().apply {
+                cornerRadius = 14f * density
+                setColor(unselectedColor)
+                setStroke((1 * density).toInt(), outlineColor)
+            }
+            backgroundShape = shape
+            background = shape
+            setPadding(
+                (16 * density).toInt(), (9 * density).toInt(),
+                (16 * density).toInt(), (9 * density).toInt()
+            )
+            minHeight = (38 * density).toInt()
+            textSize = 13f
+            setTextColor(normalTextColor)
         }
     }
 
@@ -71,16 +88,10 @@ class BouncyChip @JvmOverloads constructor(
         outlineColor = resolve(android.R.attr.textColorSecondary, Color.GRAY)
         normalTextColor = resolve(android.R.attr.textColorPrimary, Color.BLACK)
 
-        val shape = GradientDrawable().apply { cornerRadius = 14f * density }
-        backgroundShape = shape
-        background = shape
-
-        setPadding(
-            (16 * density).toInt(), (9 * density).toInt(),
-            (16 * density).toInt(), (9 * density).toInt()
-        )
-        minHeight = (38 * density).toInt()
-        textSize = 13f
+        backgroundShape?.let {
+            it.setColor(unselectedColor)
+            it.setStroke((1 * density).toInt(), outlineColor)
+        }
 
         scaleSpring = SpringAnimation(FloatValueHolder(1f)).apply {
             addUpdateListener { _, value, _ ->
