@@ -1,0 +1,6 @@
+Vimo 33.71
+
+- The Download button is always visible: a cancelled cross-fade could leave it at zero
+  opacity.
+- Video-only qualities are no longer listed. The Best available row downloads picture
+  plus sound, so every chip in the list is a quality that actually has audio.

@@ -434,6 +434,11 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             // are merged, so the file that lands is a normal video with sound.
             val selector = if (hasVideo && !hasAudio) "$formatId+bestaudio" else formatId
 
+            // a video-only stream is not offered as its own chip: the "Best
+            // available" row already downloads picture plus sound, and a silent
+            // quality in the list only confuses the choice
+            if (hasVideo && !hasAudio) return@forEach
+
             out += YtDlpResult.Format(
                 label = label,
                 detail = detail,
@@ -1072,6 +1077,10 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         }
 
         binding.downloadButton.isEnabled = formats.isNotEmpty()
+        // a cancelled cross-fade could leave the button invisible; it is always shown
+        binding.downloadButton.animate().cancel()
+        binding.downloadButton.alpha = 1f
+        binding.downloadButton.visibility = android.view.View.VISIBLE
         crossFadeDownloadLabel()
 
         // the capsule switch itself eases across instead of snapping
@@ -1089,6 +1098,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                 ?: getString(R.string.dl_download)
         }
         val button = binding.downloadButton
+        button.alpha = 1f
         if (button.text == label) return
         button.animate().cancel()
         button.animate().alpha(0f).setDuration(140L).withEndAction {
