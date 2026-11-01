@@ -61,11 +61,29 @@ class VideoMenuPopup(
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
         val width = binding.root.measuredWidth
+        val height = binding.root.measuredHeight
+
         val location = IntArray(2)
         anchor.getLocationOnScreen(location)
-        val screenWidth = anchor.resources.displayMetrics.widthPixels
+        val metrics = anchor.resources.displayMetrics
+        val screenWidth = metrics.widthPixels
+        val screenHeight = metrics.heightPixels
+
         val offsetX = (screenWidth - location[0] - width).coerceAtMost(0) - (8 * density).toInt()
-        val offsetY = (4 * density).toInt()
+
+        // A card near the bottom of the screen used to open the menu downwards and
+        // cut it off at the edge. Measure both sides and open on whichever has room;
+        // if neither does, slide it up so the whole card stays on screen.
+        val anchorBottom = location[1] + anchor.height
+        val spaceBelow = screenHeight - anchorBottom
+        val spaceAbove = location[1]
+        val gap = (4 * density).toInt()
+
+        val offsetY = when {
+            spaceBelow >= height + gap -> gap
+            spaceAbove >= height + gap -> -(height + anchor.height + gap)
+            else -> (spaceBelow - height - gap).coerceAtMost(-gap)
+        }
 
         popup.showAsDropDown(anchor, offsetX, offsetY)
     }

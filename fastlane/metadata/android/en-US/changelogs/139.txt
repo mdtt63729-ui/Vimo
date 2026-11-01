@@ -1,0 +1,4 @@
+Vimo 33.66
+
+- The three-dot menu opens above the card when there is no room below it, so a video
+  near the bottom of the screen no longer has its menu cut off.
