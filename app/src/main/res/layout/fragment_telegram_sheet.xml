@@ -87,16 +87,6 @@
         app:iconPadding="8dp"
         app:iconTint="@android:color/white" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/laterButton"
-        style="@style/Widget.Material3.Button.TextButton"
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:layout_marginTop="10dp"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        android:text="@string/tg_later"
-        android:textAllCaps="false"
-        android:textSize="14.5sp" />
+
 
 </LinearLayout>

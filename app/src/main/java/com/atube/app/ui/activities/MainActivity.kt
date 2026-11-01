@@ -83,6 +83,7 @@ class MainActivity : AbstractPlayerHostActivity() {
     private var lastNavTimeMs: Long = 0L
     private companion object {
         private const val PREF_TELEGRAM_JOINED = "telegram_channel_joined"
+        private const val PREF_TELEGRAM_NEXT_DUE = "telegram_next_due_at"
         private const val TAG_TELEGRAM_SHEET = "telegram_sheet"
 
         const val NAV_DEBOUNCE_MS = 200L
@@ -147,6 +148,15 @@ class MainActivity : AbstractPlayerHostActivity() {
      */
     private fun setUpTelegramGate() {
         if (PreferenceHelper.getBoolean(PREF_TELEGRAM_JOINED, false)) return
+
+        // Not on every launch: the sheet comes back on its own schedule, 10 to 14
+        // hours apart, so it lands at most twice a day and never at the same time.
+        val now = System.currentTimeMillis()
+        if (now < PreferenceHelper.getLong(PREF_TELEGRAM_NEXT_DUE, 0L)) return
+        val gapHours = 10 + kotlin.random.Random.nextInt(5)
+        PreferenceHelper.putLong(
+            PREF_TELEGRAM_NEXT_DUE, now + gapHours * 60L * 60L * 1000L
+        )
 
         setContentBlurred(true)
         supportFragmentManager.setFragmentResultListener(

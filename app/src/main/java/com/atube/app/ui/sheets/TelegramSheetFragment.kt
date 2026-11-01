@@ -51,11 +51,7 @@ class TelegramSheetFragment : BottomSheetDialogFragment() {
             dismissAllowingStateLoss()
         }
 
-        binding.laterButton.setOnClickListener {
-            // The app stays locked until the channel is joined, so this does not
-            // close the sheet - it just says why.
-            Toast.makeText(requireContext(), R.string.tg_must_join, Toast.LENGTH_SHORT).show()
-        }
+        // There is no "Maybe Later": the only way past this sheet is Join.
     }
 
     /**
@@ -69,8 +65,7 @@ class TelegramSheetFragment : BottomSheetDialogFragment() {
             binding.channelName to 40L,
             binding.channelLink to 70L,
             binding.root.getChildAt(2) to 130L,
-            binding.joinButton to 190L,
-            binding.laterButton to 240L
+            binding.joinButton to 190L
         )
         blocks.forEach { (view, delay) ->
             view.animate().cancel()

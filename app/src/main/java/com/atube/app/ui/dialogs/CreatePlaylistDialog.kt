@@ -112,15 +112,30 @@ class CreatePlaylistDialog : com.google.android.material.bottomsheet.BottomSheet
             addView(binding.root)
         }
 
-        return BottomSheetDialog(requireContext()).apply {
+        // This one comes down from the top, and eases in rather than appearing.
+        val dialog = Dialog(requireContext()).apply {
             setContentView(scroll)
-            behavior.state = BottomSheetBehavior.STATE_EXPANDED
-            behavior.skipCollapsed = true
-            behavior.isFitToContents = false
-            // a little above half the screen, and taller while typing
-            behavior.peekHeight = (resources.displayMetrics.heightPixels * 0.62f).toInt()
-            behavior.expandedOffset = (resources.displayMetrics.heightPixels * 0.12f).toInt()
+            window?.apply {
+                setBackgroundDrawableResource(android.R.color.transparent)
+                setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL)
+                setLayout(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            }
         }
+
+        val density = resources.displayMetrics.density
+        scroll.alpha = 0f
+        scroll.translationY = -48f * density
+        scroll.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(340L)
+            .setInterpolator(android.view.animation.OvershootInterpolator(0.9f))
+            .start()
+
+        return dialog
     }
 
     companion object {

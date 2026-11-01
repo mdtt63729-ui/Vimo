@@ -1,0 +1,5 @@
+Vimo 33.52
+
+- The Telegram sheet has no Maybe Later any more, and returns on its own schedule
+  rather than on every launch: 10 to 14 hours apart, so at most twice a day.
+- Create playlist comes down from the top with an easing, overshooting entrance.
