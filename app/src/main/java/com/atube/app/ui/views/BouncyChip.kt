@@ -166,12 +166,10 @@ class BouncyChip @JvmOverloads constructor(
     }
 
     private fun paint(fraction: Float) {
-        setBackgroundResource(
-            if (fraction > 0.5f) com.atube.app.R.drawable.bg_capsule_selected
-            else com.atube.app.R.drawable.bg_capsule
-        )
+        // Only the text colour eases here. The background is swapped once, in
+        // setSelected(); recreating it on every frame is what made the chip flicker
+        // while its spring ran.
         setTextColor(ColorUtils.blendARGB(normalTextColor, onSelectedColor, fraction))
-        invalidate()
     }
 
     private fun paintIcon(scale: Float) {

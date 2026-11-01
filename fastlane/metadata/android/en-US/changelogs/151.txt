@@ -1,0 +1,4 @@
+Vimo 33.78
+
+- The quality chips no longer flicker when tapped: the capsule is swapped once on
+  selection instead of being rebuilt on every frame of the spring.
