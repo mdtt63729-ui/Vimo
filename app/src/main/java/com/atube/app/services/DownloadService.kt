@@ -503,7 +503,10 @@ class DownloadService : LifecycleService() {
      */
     private fun stopServiceIfDone() {
         if (downloadQueue.valueIterator().asSequence().none { it }) {
-            ServiceCompat.stopForeground(this@DownloadService, ServiceCompat.STOP_FOREGROUND_DETACH)
+            // REMOVE, not DETACH: detaching leaves the "downloading" notification in
+            // the shade after there is nothing left to download, which is exactly what
+            // made it look stuck.
+            ServiceCompat.stopForeground(this@DownloadService, ServiceCompat.STOP_FOREGROUND_REMOVE)
             sendBroadcast(Intent(ACTION_SERVICE_STOPPED))
             stopSelf()
         }

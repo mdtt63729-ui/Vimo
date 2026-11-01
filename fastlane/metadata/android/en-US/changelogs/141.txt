@@ -1,0 +1,5 @@
+Vimo 33.68
+
+- The "downloading" notification is removed when the work stops, instead of staying in
+  the shade after there is nothing left to download.
+- Cancelling a download frees the engine and clears the row properly.

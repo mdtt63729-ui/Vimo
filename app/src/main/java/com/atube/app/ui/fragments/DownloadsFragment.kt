@@ -788,10 +788,12 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         YtDlpEngine.cancel(jobId)
         downloadJobs.remove(jobId)?.cancel()
 
+        YtDlpEngine.cleanup(jobId)
         downloadRows[jobId]?.apply {
             downloadProgress.isVisible = false
             downloadStatus.text = getString(R.string.fetch_cancelled)
             downloadCancel.isVisible = false
+            downloadMore.isVisible = false
         }
     }
 
