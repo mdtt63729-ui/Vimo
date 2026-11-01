@@ -201,6 +201,13 @@ class MainActivity : AbstractPlayerHostActivity() {
             return
         }
 
+        // first run: permissions and country are answered before the app opens
+        if (!PreferenceHelper.getBoolean(OnboardingActivity.PREF_ONBOARDED, false)) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+            finish()
+            return
+        }
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

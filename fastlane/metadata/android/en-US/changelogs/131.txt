@@ -1,0 +1,5 @@
+Vimo 33.58
+
+- A first-run onboarding screen: the permissions Vimo needs and the country whose
+  trending feed you want, both answered before the app opens.
+- Region is in Settings as well, so it can be changed at any time.

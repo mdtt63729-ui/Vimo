@@ -425,6 +425,11 @@
             android:name=".receivers.NotificationReceiver"
             android:enabled="true"
             android:exported="false" />
+    
+        <activity
+            android:name=".ui.activities.OnboardingActivity"
+            android:exported="false"
+            android:theme="@style/BaseTheme" />
     </application>
 
     <queries>

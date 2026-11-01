@@ -691,4 +691,16 @@
     <string name="fetch_delete">Delete</string>
     <string name="dl_download_quality">↓   Download %1$s</string>
     <string name="dl_download_audio">↓   Download MP3</string>
+
+    <string name="region_title">Region</string>
+    <string name="region_summary">Which country's trending feed to show</string>
+    <string name="onb_title">Welcome to Vimo</string>
+    <string name="onb_subtitle">Two quick things before you start — the permissions Vimo needs, and the country whose videos you want to see.</string>
+    <string name="onb_permissions">Permissions</string>
+    <string name="onb_perm_storage">Save downloads to your phone</string>
+    <string name="onb_perm_notifications">Tell you when a download finishes</string>
+    <string name="onb_allow">Allow</string>
+    <string name="onb_country">Country</string>
+    <string name="onb_country_hint">The trending feed follows this.</string>
+    <string name="onb_finish">Start using Vimo</string>
 </resources>
