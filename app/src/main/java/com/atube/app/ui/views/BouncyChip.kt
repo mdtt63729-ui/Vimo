@@ -13,7 +13,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.dynamicanimation.animation.FloatValueHolder
 import androidx.dynamicanimation.animation.SpringAnimation
-import com.google.android.material.color.MaterialColors
 
 /**
  * A quality chip that answers with its own body instead of a ripple.
@@ -30,21 +29,22 @@ class BouncyChip @JvmOverloads constructor(
     attrs: AttributeSet? = null
 ) : AppCompatTextView(context, attrs) {
 
-    private var selectedColor: Int = MaterialColors.getColor(
-        this, com.google.android.material.R.attr.colorPrimary
-    )
-    private var onSelectedColor: Int = MaterialColors.getColor(
-        this, com.google.android.material.R.attr.colorOnPrimary
-    )
-    private var unselectedColor: Int = MaterialColors.getColor(
-        this, com.google.android.material.R.attr.colorSurfaceContainerHighest
-    )
-    private var outlineColor: Int = MaterialColors.getColor(
-        this, com.google.android.material.R.attr.colorOutline
-    )
-    private var textColor: Int = MaterialColors.getColor(
-        this, com.google.android.material.R.attr.colorOnSurface
-    )
+    // Resolved from the current theme, with plain fallbacks so a theme that does not
+    // define one of these still yields a usable chip.
+    private var selectedColor: Int = themeColor(android.R.attr.colorPrimary, Color.BLACK)
+    private var onSelectedColor: Int = Color.WHITE
+    private var unselectedColor: Int =
+        themeColor(android.R.attr.colorBackground, Color.WHITE)
+    private var outlineColor: Int =
+        themeColor(android.R.attr.textColorSecondary, Color.GRAY)
+    private var textColor: Int =
+        themeColor(android.R.attr.textColorPrimary, Color.BLACK)
+
+
+    private fun themeColor(attr: Int, fallback: Int): Int {
+        val value = android.util.TypedValue()
+        return if (context.theme.resolveAttribute(attr, value, true)) value.data else fallback
+    }
 
     private val density = resources.displayMetrics.density
     private val backgroundShape = GradientDrawable().apply {
