@@ -49,17 +49,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             } ?: return@HomeFeedAdapter
             homeViewModel.recordClick(videoId)
         },
-        onDismiss = { videoId ->
-            homeViewModel.recordDismissal(videoId)
-            // Recording the dismissal alone left the card on screen, so the menu item
-            // looked like it did nothing. Drop it from the list that is showing.
-            val current = homeFeedAdapter.currentList
-            val remaining = current.filterNot { item ->
-                item is com.atube.app.recommendation.models.HomeFeedItem.Video &&
-                    item.data.url?.toID() == videoId
-            }
-            if (remaining.size != current.size) homeFeedAdapter.submitList(remaining)
-        },
+        onDismiss = { videoId -> removeFromFeed(videoId) },
         onMoreClick = { video, anchor -> showVideoMenu(video, anchor) }
     )
 
@@ -163,6 +153,24 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
      * out are offered - the rest of YouTube's list needs a cast target or a
      * server-side account, which this app does not have.
      */
+    /**
+     * Recording a dismissal left the card on screen, so the menu item looked like it
+     * did nothing. This also drops it from the list that is showing.
+     *
+     * It lives in a method rather than inline: the adapter is built with this lambda,
+     * so referring to the adapter inside it is a forward reference.
+     */
+    private fun removeFromFeed(videoId: String) {
+        homeViewModel.recordDismissal(videoId)
+        val current: List<com.atube.app.recommendation.models.HomeFeedItem> =
+            homeFeedAdapter.currentList
+        val remaining = current.filterNot { item ->
+            item is com.atube.app.recommendation.models.HomeFeedItem.Video &&
+                item.data.url?.toID() == videoId
+        }
+        if (remaining.size != current.size) homeFeedAdapter.submitList(remaining)
+    }
+
     private fun showVideoMenu(video: com.atube.app.api.obj.StreamItem, anchor: View) {
         val videoId = video.url?.toID().orEmpty()
         if (videoId.isEmpty()) return
