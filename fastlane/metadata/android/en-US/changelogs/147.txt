@@ -1,0 +1,4 @@
+Vimo 33.74
+
+- The settings icons that were drawn in solid black no longer disappear on a dark
+  screen: they take their colour from the theme.
