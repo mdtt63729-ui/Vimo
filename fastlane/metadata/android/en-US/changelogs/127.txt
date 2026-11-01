@@ -1,0 +1,4 @@
+Vimo 33.54
+
+- Download rows on the Downloader screen are full cards now: a large thumbnail,
+  the title over two lines, and the size and speed beneath it.
