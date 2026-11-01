@@ -438,6 +438,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             // available" row already downloads picture plus sound, and a silent
             // quality in the list only confuses the choice
             if (hasVideo && !hasAudio) continue
+            // Video mode lists MP4 only, as asked: other containers are hidden
+            if (hasVideo && !ext.equals("mp4", ignoreCase = true)) continue
 
             out += YtDlpResult.Format(
                 label = label,

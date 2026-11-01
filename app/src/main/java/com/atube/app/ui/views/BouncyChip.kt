@@ -112,6 +112,13 @@ class BouncyChip @JvmOverloads constructor(
     override fun setSelected(selected: Boolean) {
         if (isSelected == selected) return
         super.setSelected(selected)
+        // the capsule flips immediately, whatever state the springs are in; before this
+        // a chip whose springs were not built yet looked like it had not been tapped
+        setBackgroundResource(
+            if (selected) com.atube.app.R.drawable.bg_capsule_selected
+            else com.atube.app.R.drawable.bg_capsule
+        )
+        setTextColor(if (selected) Color.WHITE else normalTextColor)
         if (!ready) return
         runCatching {
             colourSpring?.animateToFinalPosition(if (selected) 1f else 0f)

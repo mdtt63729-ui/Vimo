@@ -1,0 +1,5 @@
+Vimo 33.76
+
+- Video mode lists MP4 qualities only; Audio mode lists MP3 only.
+- Tapping a quality chip now visibly selects it: the capsule flips immediately instead
+  of waiting for its springs.
