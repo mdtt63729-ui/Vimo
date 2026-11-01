@@ -862,37 +862,10 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             binding.skeletonRow3,
             binding.skeletonRow4
         )
-        // One animator for the whole skeleton, not one per block. Eight independent
-        // shimmer animators were repainting every frame and that is what made the
-        // loading state stutter.
-        val shape = android.graphics.drawable.GradientDrawable().apply {
-            cornerRadius = 10f * resources.displayMetrics.density
-            setColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.skeleton_bg))
-        }
-        blocks.forEach { it.background = shape.constantState?.newDrawable()?.mutate() }
-
-        val pulse = object : Runnable {
-            override fun run() {
-                if (_binding == null) return
-                binding.fetchSkeleton.animate().cancel()
-                binding.fetchSkeleton.animate()
-                    .alpha(0.45f)
-                    .setDuration(700L)
-                    .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
-                    .withEndAction {
-                        if (_binding == null) return@withEndAction
-                        binding.fetchSkeleton.animate()
-                            .alpha(1f)
-                            .setDuration(700L)
-                            .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
-                            .withEndAction(this)
-                            .start()
-                    }
-                    .start()
-            }
-        }
+        // The same shimmer the home feed uses, so loading looks the same wherever it
+        // happens. Only the handful of blocks on screen are animated, so it stays cheap.
         binding.fetchSkeleton.alpha = 1f
-        pulse.run()
+        blocks.forEach { ShimmerHelper.applyShimmer(it, cornerRadiusDp = 10f) }
     }
 
     private fun showLoading() {

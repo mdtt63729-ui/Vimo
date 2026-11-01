@@ -1,0 +1,4 @@
+Vimo 33.79
+
+- Fetching now shows the same shimmer the home feed uses, so loading looks the same
+  everywhere in the app.
