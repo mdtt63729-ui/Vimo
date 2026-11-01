@@ -16,10 +16,27 @@ import com.atube.app.recommendation.models.UserInterestProfile
  */
 object RecommendationFeedbackManager {
 
-    // In-memory stores (persisted via Room in a production system)
-    private val notInterestedVideoIds: MutableSet<String> = mutableSetOf()
-    private val blockedChannelIds: MutableSet<String> = mutableSetOf()
+    // Persisted, not just in memory: feedback that vanishes when the app restarts
+    // is why "Not interested" and "Don't recommend channel" appeared to do nothing.
+    private val notInterestedVideoIds: MutableSet<String> =
+        load(KEY_NOT_INTERESTED).toMutableSet()
+    private val blockedChannelIds: MutableSet<String> =
+        load(KEY_BLOCKED_CHANNELS).toMutableSet()
     private val dismissedVideoIds: MutableSet<String> = mutableSetOf()
+
+    private const val KEY_NOT_INTERESTED = "rec_not_interested"
+    private const val KEY_BLOCKED_CHANNELS = "rec_blocked_channels"
+
+    private fun load(key: String): Set<String> =
+        com.atube.app.helpers.PreferenceHelper.getString(key, "")
+            ?.split('\n')
+            ?.filter { it.isNotBlank() }
+            ?.toSet()
+            .orEmpty()
+
+    private fun save(key: String, values: Set<String>) {
+        com.atube.app.helpers.PreferenceHelper.putString(key, values.joinToString("\n"))
+    }
 
     /**
      * Mark a video as "not interested".
@@ -28,6 +45,7 @@ object RecommendationFeedbackManager {
      */
     fun markNotInterested(videoId: String) {
         notInterestedVideoIds.add(videoId)
+        save(KEY_NOT_INTERESTED, notInterestedVideoIds)
     }
 
     /**
@@ -36,7 +54,9 @@ object RecommendationFeedbackManager {
      * This only affects recommendations, not direct search results.
      */
     fun blockChannel(channelId: String) {
+        if (channelId.isBlank()) return
         blockedChannelIds.add(channelId)
+        save(KEY_BLOCKED_CHANNELS, blockedChannelIds)
     }
 
     /**

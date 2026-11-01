@@ -171,6 +171,35 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         if (remaining.size != current.size) homeFeedAdapter.submitList(remaining)
     }
 
+    /** Drops every card from a blocked channel, not only the one that was tapped. */
+    private fun removeChannelFromFeed(channelId: String, videoId: String) {
+        homeViewModel.recordDismissal(videoId)
+        val current: List<com.atube.app.recommendation.models.HomeFeedItem> =
+            homeFeedAdapter.currentList
+        val remaining = current.filterNot { item ->
+            item is com.atube.app.recommendation.models.HomeFeedItem.Video &&
+                (item.data.uploaderUrl?.toID() == channelId || item.data.url?.toID() == videoId)
+        }
+        if (remaining.size != current.size) homeFeedAdapter.submitList(remaining)
+    }
+
+    /** Removes anything the user hid earlier, so it stays gone after a reload. */
+    private fun filterHidden(
+        items: List<com.atube.app.recommendation.models.HomeFeedItem>
+    ): List<com.atube.app.recommendation.models.HomeFeedItem> {
+        val feedback = com.atube.app.recommendation.feedback.RecommendationFeedbackManager
+        if (feedback.getBlockedChannels().isEmpty() &&
+            feedback.getNotInterestedVideos().isEmpty()
+        ) return items
+
+        return items.filterNot { item ->
+            item is com.atube.app.recommendation.models.HomeFeedItem.Video && (
+                feedback.isChannelBlocked(item.data.uploaderUrl?.toID().orEmpty()) ||
+                    feedback.isNotInterested(item.data.url?.toID().orEmpty())
+                )
+        }
+    }
+
     private fun showVideoMenu(video: com.atube.app.api.obj.StreamItem, anchor: View) {
         val videoId = video.url?.toID().orEmpty()
         if (videoId.isEmpty()) return
@@ -196,12 +225,18 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 com.atube.app.ui.views.VideoMenuPopup.Action.SHARE -> shareLink(videoId)
 
                 com.atube.app.ui.views.VideoMenuPopup.Action.NOT_INTERESTED -> {
+                    com.atube.app.recommendation.feedback.RecommendationFeedbackManager
+                        .markNotInterested(videoId)
                     removeFromFeed(videoId)
                     Toast.makeText(requireContext(), R.string.menu_hidden, Toast.LENGTH_SHORT).show()
                 }
                 com.atube.app.ui.views.VideoMenuPopup.Action.DONT_RECOMMEND -> {
-                    removeFromFeed(videoId)
-                    Toast.makeText(requireContext(), R.string.menu_hidden, Toast.LENGTH_SHORT).show()
+                    // block the whole channel, not just this card
+                    val channelId = video.uploaderUrl?.toID().orEmpty()
+                    com.atube.app.recommendation.feedback.RecommendationFeedbackManager
+                        .blockChannel(channelId)
+                    removeChannelFromFeed(channelId, videoId)
+                    Toast.makeText(requireContext(), R.string.menu_channel_blocked, Toast.LENGTH_SHORT).show()
                 }
                 com.atube.app.ui.views.VideoMenuPopup.Action.REPORT -> shareLink(videoId)
             }
@@ -245,7 +280,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 binding.homeFeedRV.isVisible = hasContent
                 binding.nothingHere.isVisible = false
                 binding.refresh.isRefreshing = false
-                if (hasContent) homeFeedAdapter.submitList(state.items)
+                if (hasContent) homeFeedAdapter.submitList(filterHidden(state.items))
             }
 
             HomeUiStatus.LOADING -> {
@@ -257,7 +292,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
                 if (state.items.isNotEmpty()) {
                     binding.homeFeedRV.isVisible = true
-                    homeFeedAdapter.submitList(state.items)
+                    homeFeedAdapter.submitList(filterHidden(state.items))
                 }
             }
 
@@ -269,7 +304,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 if (state.items.isNotEmpty()) {
                     binding.homeFeedRV.isVisible = true
                     // Use commitCallback to prefetch only after layout settles
-                    homeFeedAdapter.submitList(state.items) {
+                    homeFeedAdapter.submitList(filterHidden(state.items)) {
                         prefetchTopVideos(state.items)
                     }
                 }

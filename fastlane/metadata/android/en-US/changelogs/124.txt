@@ -1,0 +1,5 @@
+Vimo 33.51
+
+- Not interested and Don't recommend channel are remembered now, instead of living
+  only in memory. Don't recommend channel blocks the whole channel, and the feed
+  filters both out on every load.
