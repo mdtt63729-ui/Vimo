@@ -976,6 +976,21 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
 
     private fun renderMode() {
         val density = resources.displayMetrics.density
+        // real Material icons beside each label, tinted to match the capsule
+        val densityForIcons = resources.displayMetrics.density
+        val movieIcon = androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.ic_movie)
+            ?.mutate()
+        val musicIcon = androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.ic_music_note)
+            ?.mutate()
+        val onSelected = android.graphics.Color.WHITE
+        val onNormal = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.dl_muted)
+        movieIcon?.setTint(if (audioMode) onNormal else onSelected)
+        musicIcon?.setTint(if (audioMode) onSelected else onNormal)
+        binding.videoMode.setCompoundDrawablesRelativeWithIntrinsicBounds(movieIcon, null, null, null)
+        binding.videoMode.compoundDrawablePadding = (7 * densityForIcons).toInt()
+        binding.audioMode.setCompoundDrawablesRelativeWithIntrinsicBounds(musicIcon, null, null, null)
+        binding.audioMode.compoundDrawablePadding = (7 * densityForIcons).toInt()
+
         binding.videoMode.setBackgroundResource(
             if (audioMode) 0 else R.drawable.bg_capsule_selected
         )

@@ -1,0 +1,4 @@
+Vimo 33.73
+
+- The Video and Audio switch uses proper Material icons instead of the box and note
+  glyphs, tinted to match whichever side is selected.
