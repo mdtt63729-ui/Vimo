@@ -429,10 +429,10 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             // audio is what the video tab promises: 1080p plus the best audio there
             // is. yt-dlp merges the two with the bundled ffmpeg, so the file that
             // lands on disk is a normal video with sound.
-            // pairing a video-only stream with bestaudio needs ffmpeg to merge them;
-            // asking for the pair without it is what left the download unfinished
-            val selector = if (hasVideo && !hasAudio && canMerge) "$formatId+bestaudio"
-            else formatId
+            // A video choice always means picture plus sound, the way the other app
+            // does it: a video-only stream is paired with the best audio and the two
+            // are merged, so the file that lands is a normal video with sound.
+            val selector = if (hasVideo && !hasAudio) "$formatId+bestaudio" else formatId
 
             out += YtDlpResult.Format(
                 label = label,

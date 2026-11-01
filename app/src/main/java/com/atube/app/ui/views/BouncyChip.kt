@@ -50,13 +50,10 @@ class BouncyChip @JvmOverloads constructor(
             // painted straight away with plain colours; theme attributes are not read
             // here, which is what used to crash, and the chip is never invisible
             density = resources.displayMetrics.density
-            val shape = GradientDrawable().apply {
-                cornerRadius = 14f * density
-                setColor(unselectedColor)
-                setStroke((1 * density).toInt(), outlineColor)
-            }
-            backgroundShape = shape
-            background = shape
+            setBackgroundResource(
+                if (isSelected) com.atube.app.R.drawable.bg_capsule_selected
+                else com.atube.app.R.drawable.bg_capsule
+            )
             setPadding(
                 (16 * density).toInt(), (9 * density).toInt(),
                 (16 * density).toInt(), (9 * density).toInt()
@@ -88,10 +85,6 @@ class BouncyChip @JvmOverloads constructor(
         outlineColor = resolve(android.R.attr.textColorSecondary, Color.GRAY)
         normalTextColor = resolve(android.R.attr.textColorPrimary, Color.BLACK)
 
-        backgroundShape?.let {
-            it.setColor(unselectedColor)
-            it.setStroke((1 * density).toInt(), outlineColor)
-        }
 
         scaleSpring = SpringAnimation(FloatValueHolder(1f)).apply {
             addUpdateListener { _, value, _ ->
@@ -166,11 +159,9 @@ class BouncyChip @JvmOverloads constructor(
     }
 
     private fun paint(fraction: Float) {
-        val shape = backgroundShape ?: return
-        shape.setColor(ColorUtils.blendARGB(unselectedColor, selectedColor, fraction))
-        shape.setStroke(
-            (1 * density).toInt(),
-            ColorUtils.setAlphaComponent(outlineColor, (255 * 0.6f * (1f - fraction)).toInt())
+        setBackgroundResource(
+            if (fraction > 0.5f) com.atube.app.R.drawable.bg_capsule_selected
+            else com.atube.app.R.drawable.bg_capsule
         )
         setTextColor(ColorUtils.blendARGB(normalTextColor, onSelectedColor, fraction))
         invalidate()

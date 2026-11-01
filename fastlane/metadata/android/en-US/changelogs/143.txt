@@ -1,0 +1,6 @@
+Vimo 33.70
+
+- Quality chips are drawn with the app's capsule shapes, so they read as capsules in
+  light and dark alike.
+- Choosing a video downloads picture and sound together: a video-only stream is paired
+  with the best audio and merged, as the other app does it.
