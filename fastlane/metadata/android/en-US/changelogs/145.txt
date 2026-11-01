@@ -1,0 +1,4 @@
+Vimo 33.72
+
+- The create-playlist sheet rises to full height while the name field has focus, so what
+  you are typing is never hidden behind the keyboard, and settles back afterwards.

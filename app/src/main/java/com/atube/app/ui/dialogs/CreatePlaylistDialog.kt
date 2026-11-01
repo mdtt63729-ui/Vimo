@@ -128,6 +128,17 @@ class CreatePlaylistDialog : com.google.android.material.bottomsheet.BottomSheet
                 .coerceAtMost((resources.displayMetrics.heightPixels * 0.72f).toInt())
         }
 
+        // While the name is being typed the sheet takes the whole screen, so the
+        // fields are never hidden behind the keyboard; it settles back when focus goes.
+        val nameField = scroll.findViewById<android.widget.EditText>(R.id.playlistName)
+        nameField?.setOnFocusChangeListener { _, hasFocus ->
+            sheet.behavior.state = if (hasFocus) {
+                BottomSheetBehavior.STATE_EXPANDED
+            } else {
+                BottomSheetBehavior.STATE_COLLAPSED
+            }
+        }
+
         val animate = animatorScaleEnabled()
         if (animate) {
             val density = resources.displayMetrics.density
