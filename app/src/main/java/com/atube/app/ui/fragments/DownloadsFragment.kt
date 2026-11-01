@@ -410,7 +410,13 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             val hasVideo = format.optBoolean("has_video")
             val hasAudio = format.optBoolean("has_audio")
 
-            val label = if (hasVideo) "$resolution · $ext" else "Audio · $ext"
+            val height = format.optInt("height")
+            val shortLabel = when {
+                hasVideo && height > 0 -> "${height}p"
+                hasVideo -> resolution
+                else -> "Audio"
+            }
+            val label = "$shortLabel · $ext"
             val kind = when {
                 hasVideo && hasAudio -> "Video + audio"
                 hasVideo -> "Video only"
@@ -419,11 +425,17 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             val size = YtDlpFetchAdapter.formatSize(format.optLong("filesize"))
             val detail = listOf(kind, size).filter { it.isNotBlank() }.joinToString(" · ")
 
+            // A video-only stream carries no sound. Pairing it with the site's best
+            // audio is what the video tab promises: 1080p plus the best audio there
+            // is. yt-dlp merges the two with the bundled ffmpeg, so the file that
+            // lands on disk is a normal video with sound.
+            val selector = if (hasVideo && !hasAudio) "$formatId+bestaudio" else formatId
+
             out += YtDlpResult.Format(
                 label = label,
                 detail = detail,
                 directUrl = direct,
-                formatId = formatId,
+                formatId = selector,
                 pageUrl = pageUrl,
                 isAudio = !hasVideo
             )
@@ -502,7 +514,11 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             // otherwise the exact path yt-dlp wrote.
             val produced: String? = withContext(Dispatchers.IO) {
                 if (format.convertToMp3) {
-                    if (YtDlpEngine.startAudioDownload(format.pageUrl, directory.toFile(), jobId)) "" else null
+                    val bitrate = format.formatId.substringAfter("mp3:", "192")
+                    if (YtDlpEngine.startAudioDownload(
+                            format.pageUrl, directory.toFile(), jobId, bitrate
+                        )
+                    ) "" else null
                 } else if (format.formatId == "direct") {
                     // A direct URL (Pinterest media, or an InnerTube stream) is
                     // downloaded as-is. InnerTube URLs only answer to the headers
@@ -859,17 +875,19 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         // video: the streams that already carry picture and sound
         videoFormats = items.filterIsInstance<YtDlpResult.Format>().filter { !it.isAudio }
         // audio: the same video turned into a song by the bundled ffmpeg
-        audioFormats = listOf(
+        // The audio tab is where the bitrate is chosen - the video tab never offers
+        // one, because there the sound is whatever the site pairs with the picture.
+        audioFormats = listOf("320", "192", "128").map { bitrate ->
             YtDlpResult.Format(
-                label = "MP3 · 192 kbps",
+                label = "MP3 · $bitrate kbps",
                 detail = getString(R.string.dl_converted_mp3),
                 directUrl = "",
-                formatId = "mp3",
+                formatId = "mp3:$bitrate",
                 pageUrl = video.url,
                 isAudio = true,
                 convertToMp3 = true
             )
-        )
+        }
 
         audioMode = false
         renderMode()

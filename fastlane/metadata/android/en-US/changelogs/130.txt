@@ -1,0 +1,5 @@
+Vimo 33.57
+
+- Video qualities read 360p, 720p, 1080p and up. A video-only stream is paired with
+  the site's best audio, so the file that lands has sound.
+- The audio tab offers real MP3 bitrates: 320, 192 and 128 kbps.

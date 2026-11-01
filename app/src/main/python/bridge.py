@@ -307,7 +307,7 @@ def start_download(url, format_selector, output_dir, job_id, headers_json=""):
         return json.dumps({"ok": False, "error": "Cancelled" if cancelled else str(e)[:400]})
 
 
-def start_audio_download(url, output_dir, job_id):
+def start_audio_download(url, output_dir, job_id, bitrate="192"):
     """Download the audio track and convert it to MP3 with the bundled ffmpeg.
 
     Blocks until finished, so call it on a background thread. Progress is read
@@ -332,7 +332,7 @@ def start_audio_download(url, output_dir, job_id):
         "postprocessors": [{
             "key": "FFmpegExtractAudio",
             "preferredcodec": "mp3",
-            "preferredquality": "192",
+            "preferredquality": str(bitrate),
         }],
     }
     opts.update(_ffmpeg_opts())
