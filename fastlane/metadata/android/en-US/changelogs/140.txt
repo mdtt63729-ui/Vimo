@@ -1,0 +1,4 @@
+Vimo 33.67
+
+- The three-dot on a Library download row opens the same menu as everywhere else.
+- A saved download row shows how big the file is instead of only "Saved".

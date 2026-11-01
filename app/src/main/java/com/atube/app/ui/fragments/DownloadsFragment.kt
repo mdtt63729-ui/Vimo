@@ -660,6 +660,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         val videoId = downloadedIds[jobId]
         if (ok && videoId != null) {
             row.downloadStatus.text = getString(R.string.fetch_saved)
+        // the size of a finished download, so an old row is not just "Saved"
+        row.downloadSize.text = if (bytes > 0) YtDlpFetchAdapter.formatSize(bytes) else ""
             row.root.setOnClickListener {
                 NavigationHelper.navigateVideo(
                     requireContext(),
@@ -755,13 +757,16 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             if (_binding == null || saved.isEmpty()) return@launch
 
             saved.forEach { entry ->
-                addSavedRow(entry.download.videoId, entry.download.title)
+                val bytes = entry.downloadItems.sumOf { it.downloadSize }
+                    .takeIf { it > 0 }
+                    ?: entry.downloadItems.sumOf { runCatching { it.path.fileSize() }.getOrDefault(0L) }
+                addSavedRow(entry.download.videoId, entry.download.title, bytes)
             }
             binding.downloadsSection.isVisible = true
         }
     }
 
-    private fun addSavedRow(videoId: String, title: String) {
+    private fun addSavedRow(videoId: String, title: String, bytes: Long = 0L) {
         val row = ItemYtdlpDownloadBinding.inflate(
             LayoutInflater.from(requireContext()), binding.downloadsContainer, false
         )

@@ -63,6 +63,9 @@ class DownloadsAdapter(
 
             channelImageContainer.isGone = true
             videoTitle.text = download.title
+            moreButton.setOnClickListener {
+                com.atube.app.helpers.VideoMenuHelper.show(it, download.toStreamItem())
+            }
             channelName.text = download.uploader
             videoInfo.text = download.uploadDate?.let { TextUtils.localizeDate(it) }
             watchProgress.setWatchProgressLength(download.videoId, download.duration ?: 0)
