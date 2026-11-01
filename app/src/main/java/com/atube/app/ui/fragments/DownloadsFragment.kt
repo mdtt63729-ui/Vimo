@@ -979,7 +979,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     }
 
     /** Four chips a row, 6dp apart, each carrying its own leading icon. */
-    private fun fillQualityRow() = runCatching {
+    private fun fillQualityRow() {
+        runCatching {
         val density = resources.displayMetrics.density
         val formats = if (audioMode) audioFormats else videoFormats
         val container = binding.qualityContainer
@@ -1031,6 +1032,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         // the capsule switch itself eases across instead of snapping
         binding.videoMode.animate().alpha(if (audioMode) 0.55f else 1f).setDuration(160).start()
         binding.audioMode.animate().alpha(if (audioMode) 1f else 0.55f).setDuration(160).start()
+        }
     }
 
     /** The button's label cross-fades instead of swapping in a single frame. */
