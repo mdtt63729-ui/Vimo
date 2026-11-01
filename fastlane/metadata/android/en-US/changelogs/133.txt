@@ -1,0 +1,5 @@
+Vimo 33.60
+
+- Fixed the crash when the quality chips were rebuilt: the chip no longer touches
+  its drawable while it is still being constructed, and the row's fade-out no
+  longer rebuilds chips after the screen is gone.

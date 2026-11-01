@@ -964,6 +964,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             .translationY(-lift)
             .setDuration(170L)
             .withEndAction {
+                if (_binding == null) return@withEndAction
                 fillQualityRow()
                 val drop = row.height / 8f
                 row.translationY = drop

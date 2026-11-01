@@ -41,10 +41,10 @@ class BouncyChip @JvmOverloads constructor(
         themeColor(android.R.attr.textColorPrimary, Color.BLACK)
 
 
-    private fun themeColor(attr: Int, fallback: Int): Int {
+    private fun themeColor(attr: Int, fallback: Int): Int = runCatching {
         val value = android.util.TypedValue()
-        return if (context.theme.resolveAttribute(attr, value, true)) value.data else fallback
-    }
+        if (context.theme.resolveAttribute(attr, value, true)) value.data else fallback
+    }.getOrDefault(fallback)
 
     private val density = resources.displayMetrics.density
     private val backgroundShape = GradientDrawable().apply {
@@ -76,17 +76,21 @@ class BouncyChip @JvmOverloads constructor(
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
 
     init {
-        gravity = Gravity.CENTER
-        isClickable = true
-        isFocusable = true
-        background = backgroundShape
-        setPadding(
-            (16 * density).toInt(), (9 * density).toInt(),
-            (16 * density).toInt(), (9 * density).toInt()
-        )
-        minHeight = (38 * density).toInt()
-        textSize = 13f
-        applyColours(if (isSelected) 1f else 0f)
+        runCatching {
+            gravity = Gravity.CENTER
+            isClickable = true
+            isFocusable = true
+            background = backgroundShape
+            setPadding(
+                (16 * density).toInt(), (9 * density).toInt(),
+                (16 * density).toInt(), (9 * density).toInt()
+            )
+            minHeight = (38 * density).toInt()
+            textSize = 13f
+            // painted after layout: touching the drawable during construction is what
+            // could throw before the view was fully built
+            post { runCatching { applyColours(if (isSelected) 1f else 0f) } }
+        }
     }
 
     override fun setSelected(selected: Boolean) {
@@ -135,7 +139,7 @@ class BouncyChip @JvmOverloads constructor(
         scaleSpring.animateToFinalPosition(target)
     }
 
-    private fun applyColours(fraction: Float) {
+    private fun applyColours(fraction: Float) = runCatching {
         val bg = ColorUtils.blendARGB(unselectedColor, selectedColor, fraction)
         backgroundShape.setColor(bg)
         backgroundShape.setStroke(
@@ -150,11 +154,11 @@ class BouncyChip @JvmOverloads constructor(
         invalidate()
     }
 
-    private fun applyIconScale(scale: Float) {
-        val icon = compoundDrawablesRelative.firstOrNull() ?: return
+    private fun applyIconScale(scale: Float) = runCatching {
+        val icon = compoundDrawablesRelative.firstOrNull() ?: return@runCatching
         val size = (18 * density * scale).toInt().coerceAtLeast(1)
         icon.setBounds(0, 0, size, size)
-    }
+    }.let { }
 
     private companion object {
         const val STIFFNESS_HIGH = 10_000f
