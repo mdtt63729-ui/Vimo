@@ -660,8 +660,6 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         val videoId = downloadedIds[jobId]
         if (ok && videoId != null) {
             row.downloadStatus.text = getString(R.string.fetch_saved)
-        // the size of a finished download, so an old row is not just "Saved"
-        row.downloadSize.text = if (bytes > 0) YtDlpFetchAdapter.formatSize(bytes) else ""
             row.root.setOnClickListener {
                 NavigationHelper.navigateVideo(
                     requireContext(),
@@ -773,7 +771,10 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         row.downloadTitle.text = title.ifBlank { getString(R.string.fetch_saved) }
         row.downloadProgress.isVisible = false
         row.downloadCancel.isVisible = false
+        row.downloadMore.isVisible = true
+        row.downloadMore.setOnClickListener { showRowMenu(it, videoId) }
         row.downloadStatus.text = getString(R.string.fetch_saved)
+        row.downloadSize.text = if (bytes > 0) YtDlpFetchAdapter.formatSize(bytes) else ""
         row.root.setOnClickListener {
             NavigationHelper.navigateVideo(
                 requireContext(),
