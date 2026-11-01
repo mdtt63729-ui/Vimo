@@ -51,6 +51,14 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         },
         onDismiss = { videoId ->
             homeViewModel.recordDismissal(videoId)
+            // Recording the dismissal alone left the card on screen, so the menu item
+            // looked like it did nothing. Drop it from the list that is showing.
+            val current = homeFeedAdapter.currentList
+            val remaining = current.filterNot { item ->
+                item is com.atube.app.recommendation.models.HomeFeedItem.Video &&
+                    item.data.url?.toID() == videoId
+            }
+            if (remaining.size != current.size) homeFeedAdapter.submitList(remaining)
         },
         onMoreClick = { video, anchor -> showVideoMenu(video, anchor) }
     )

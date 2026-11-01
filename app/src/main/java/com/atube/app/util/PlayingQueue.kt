@@ -73,7 +73,10 @@ object PlayingQueue {
     fun addAsNext(streamItem: StreamItem) = synchronized(queue) {
         if (currentStream == streamItem) return
         if (queue.contains(streamItem)) queue.remove(streamItem)
-        queue.add(currentIndex() + 1, streamItem)
+        // currentIndex() answers 0 for an empty queue, so "+1" asked for index 1 in a
+        // list of size 0 and threw. Clamp to something the list can accept.
+        val index = (currentIndex() + 1).coerceIn(0, queue.size)
+        queue.add(index, streamItem)
     }
 
     // return the next item, or if repeating enabled and no video left, the first one of the queue

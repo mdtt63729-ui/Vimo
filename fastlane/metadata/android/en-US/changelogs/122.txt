@@ -1,0 +1,7 @@
+Vimo 33.49
+
+- Fixed the crash when the player reported its metadata before the screen had its
+  video details.
+- Fixed the crash when adding a video to an empty playing queue.
+- Not interested and Don't recommend channel now remove the card from the feed
+  immediately, instead of recording it silently.

@@ -1277,6 +1277,11 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
 
     @SuppressLint("SetTextI18n")
     private fun updatePlayerView() {
+        // onMediaMetadataChanged can arrive before this fragment has been handed its
+        // streams; reading them then crashed with a null dereference inside the view
+        // update. Nothing to draw yet, so do nothing.
+        if (!::streams.isInitialized) return
+
         dismissCommentsSheet()
 
         setPlayerDefaults()
