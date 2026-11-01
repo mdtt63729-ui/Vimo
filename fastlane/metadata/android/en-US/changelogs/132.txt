@@ -1,0 +1,6 @@
+Vimo 33.59
+
+- A new release on GitHub now reaches the app: an update card drops in from the
+  top with Download and Maybe later, a notification with the app logo, and the
+  download installs itself when it lands.
+- Onboarding asks for the install-updates permission as well.

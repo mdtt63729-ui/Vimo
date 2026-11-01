@@ -703,4 +703,14 @@
     <string name="onb_country">Country</string>
     <string name="onb_country_hint">The trending feed follows this.</string>
     <string name="onb_finish">Start using Vimo</string>
+
+    <string name="update_title">New version available</string>
+    <string name="update_download">Download update</string>
+    <string name="update_later">Maybe later</string>
+    <string name="update_downloading">Downloading the update</string>
+    <string name="update_notification_title">New version available</string>
+    <string name="update_notification_text">Vimo %1$s is out. Tap to update.</string>
+    <string name="update_channel">App updates</string>
+    <string name="update_version">Version %1$s</string>
+    <string name="onb_perm_install">Install app updates</string>
 </resources>

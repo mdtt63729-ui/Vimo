@@ -37,6 +37,18 @@ class OnboardingActivity : AppCompatActivity() {
         setupCountry()
 
         binding.storageButton.setOnClickListener { requestStorage() }
+        binding.installButton.setOnClickListener {
+            // the app updates itself, which Android only allows once the user has
+            // said yes to installing from this source
+            runCatching {
+                startActivity(
+                    Intent(
+                        android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        android.net.Uri.parse("package:$packageName")
+                    )
+                )
+            }
+        }
         binding.notificationButton.setOnClickListener { requestNotifications() }
 
         binding.finishButton.setOnClickListener {
@@ -91,6 +103,11 @@ class OnboardingActivity : AppCompatActivity() {
             ContextCompat.checkSelfPermission(
                 this, Manifest.permission.POST_NOTIFICATIONS
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+        val installAllowed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            packageManager.canRequestPackageInstalls()
+        } else true
+        binding.installButton.isVisible = !installAllowed
 
         binding.storageButton.isVisible = !storageGranted
         binding.notificationButton.isVisible = !notificationsGranted

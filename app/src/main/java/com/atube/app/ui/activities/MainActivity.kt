@@ -146,6 +146,21 @@ class MainActivity : AbstractPlayerHostActivity() {
      * behind it is blurred on API 31+, and the app cannot be used: the sheet cannot
      * be dismissed and nothing behind it takes touch.
      */
+    /** Looks at the releases endpoint and offers a newer build, if there is one. */
+    private fun checkForUpdate() {
+        lifecycleScope.launch {
+            val update = com.atube.app.helpers.UpdateChecker.check() ?: return@launch
+            com.atube.app.helpers.UpdateInstaller.notifyAvailable(this@MainActivity, update.version)
+            if (supportFragmentManager.findFragmentByTag(
+                    com.atube.app.ui.dialogs.UpdateSheetFragment.TAG
+                ) == null
+            ) {
+                com.atube.app.ui.dialogs.UpdateSheetFragment.newInstance(update)
+                    .show(supportFragmentManager, com.atube.app.ui.dialogs.UpdateSheetFragment.TAG)
+            }
+        }
+    }
+
     private fun setUpTelegramGate() {
         if (PreferenceHelper.getBoolean(PREF_TELEGRAM_JOINED, false)) return
 
@@ -221,6 +236,8 @@ class MainActivity : AbstractPlayerHostActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             com.atube.app.api.muso.MusoStreamResolver.preWarm()
         }
+
+        checkForUpdate()
 
         // The channel gate comes up once per install, right after the splash, with
         // the screen behind it blurred and the app locked until Join is tapped.
