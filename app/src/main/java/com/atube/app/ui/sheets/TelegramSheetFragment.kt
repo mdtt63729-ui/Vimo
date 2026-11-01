@@ -61,11 +61,11 @@ class TelegramSheetFragment : BottomSheetDialogFragment() {
     private fun playEntrance() {
         val density = resources.displayMetrics.density
         val blocks = listOf(
-            binding.channelLogo to 0L,
-            binding.channelName to 40L,
-            binding.channelLink to 70L,
-            binding.root.getChildAt(2) to 130L,
-            binding.joinButton to 190L
+            binding.channelLogo to 60L,
+            binding.channelName to 110L,
+            binding.channelLink to 150L,
+            binding.root.getChildAt(2) to 210L,
+            binding.joinButton to 270L
         )
         blocks.forEach { (view, delay) ->
             view.animate().cancel()
@@ -75,7 +75,7 @@ class TelegramSheetFragment : BottomSheetDialogFragment() {
                 .alpha(1f)
                 .translationY(0f)
                 .setStartDelay(delay)
-                .setDuration(300L)
+                .setDuration(360L)
                 .setInterpolator(android.view.animation.DecelerateInterpolator())
                 .start()
         }

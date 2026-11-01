@@ -979,7 +979,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     }
 
     /** Four chips a row, 6dp apart, each carrying its own leading icon. */
-    private fun fillQualityRow() {
+    private fun fillQualityRow() = runCatching {
         val density = resources.displayMetrics.density
         val formats = if (audioMode) audioFormats else videoFormats
         val container = binding.qualityContainer
@@ -999,7 +999,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                 )
             }
             rowFormats.forEach { format ->
-                val chip = com.atube.app.ui.views.BouncyChip(requireContext()).apply {
+                val chip = (LayoutInflater.from(requireContext())
+                    .inflate(R.layout.chip_bouncy, row, false) as com.atube.app.ui.views.BouncyChip).apply {
                     text = format.label
                     isSelected = format == selectedFormat
                     if (icon != null) {

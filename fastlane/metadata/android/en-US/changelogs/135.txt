@@ -1,0 +1,6 @@
+Vimo 33.62
+
+- Fixed the crash when the quality chips were built: the chip is inflated from a
+  layout now, so its theme is resolved before the constructor runs.
+- The update card drops in from the top with the staggered, eased entrance the PRD
+  describes, and the Telegram sheet arrives more gently.

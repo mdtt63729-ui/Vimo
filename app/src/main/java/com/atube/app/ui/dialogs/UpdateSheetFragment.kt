@@ -35,15 +35,33 @@ class UpdateSheetFragment : DialogFragment() {
             )
         }
 
+        // The PRD's entrance, mirrored: the card drops in from above while its blocks
+        // rise into place one after another, 40ms apart, on the standard easing.
         val density = resources.displayMetrics.density
         view.alpha = 0f
         view.translationY = -56f * density
         view.animate()
             .alpha(1f)
             .translationY(0f)
-            .setDuration(360L)
-            .setInterpolator(android.view.animation.OvershootInterpolator(0.85f))
+            .setDuration(300L)
+            .setInterpolator(android.view.animation.DecelerateInterpolator())
             .start()
+
+        val blocks = (0 until (view as? android.view.ViewGroup)?.childCount.orZero())
+            .mapNotNull { (view as android.view.ViewGroup).getChildAt(it) }
+        val card = blocks.firstOrNull() as? android.view.ViewGroup
+        val rows = (0 until (card?.childCount ?: 0)).mapNotNull { card?.getChildAt(it) }
+        rows.forEachIndexed { index, row ->
+            row.alpha = 0f
+            row.translationY = 24f * density
+            row.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(120L + index * 40L)
+                .setDuration(350L)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
+        }
 
         return dialog
     }
@@ -102,4 +120,6 @@ class UpdateSheetFragment : DialogFragment() {
             }
         }
     }
+
+    private fun Int?.orZero(): Int = this ?: 0
 }
