@@ -437,8 +437,9 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             // a video-only stream is not offered as its own chip: the "Best
             // available" row already downloads picture plus sound, and a silent
             // quality in the list only confuses the choice
-            if (hasVideo && !hasAudio) continue
-            // Video mode lists MP4 only, as asked: other containers are hidden
+            // Video mode lists MP4 only. A video-only stream is kept: it is paired
+            // with the best audio at download time, and on YouTube every 720p and
+            // 1080p row is video-only, so dropping them left only Best available.
             if (hasVideo && !ext.equals("mp4", ignoreCase = true)) continue
 
             out += YtDlpResult.Format(
