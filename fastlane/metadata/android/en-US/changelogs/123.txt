@@ -1,0 +1,4 @@
+Vimo 33.50
+
+- The three-dot menu is a small rounded card with an icon beside every action, and
+  it floats above the page so it reads on a white or a black background.

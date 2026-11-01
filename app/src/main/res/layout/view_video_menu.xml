@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    app:cardBackgroundColor="?attr/colorSurface"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="14dp"
+    app:strokeWidth="0dp">
+
+    <LinearLayout
+        android:layout_width="212dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="6dp"
+        android:paddingVertical="8dp">
+
+        <LinearLayout
+            android:id="@+id/rowPlayNext"
+            style="@style/VideoMenuRow">
+            <ImageView style="@style/VideoMenuIcon" android:src="@drawable/ic_play_next" />
+            <TextView style="@style/VideoMenuLabel" android:text="@string/menu_play_next" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowPlayLast"
+            style="@style/VideoMenuRow">
+            <ImageView style="@style/VideoMenuIcon" android:src="@drawable/ic_play_last" />
+            <TextView style="@style/VideoMenuLabel" android:text="@string/menu_play_last" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowDownload"
+            style="@style/VideoMenuRow">
+            <ImageView style="@style/VideoMenuIcon" android:src="@drawable/ic_download" />
+            <TextView style="@style/VideoMenuLabel" android:text="@string/menu_download" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowSave"
+            style="@style/VideoMenuRow">
+            <ImageView style="@style/VideoMenuIcon" android:src="@drawable/ic_playlist_add" />
+            <TextView style="@style/VideoMenuLabel" android:text="@string/menu_save_to_playlist" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowShare"
+            style="@style/VideoMenuRow">
+            <ImageView style="@style/VideoMenuIcon" android:src="@drawable/ic_share" />
+            <TextView style="@style/VideoMenuLabel" android:text="@string/menu_share" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowNotInterested"
+            style="@style/VideoMenuRow">
+            <ImageView style="@style/VideoMenuIcon" android:src="@drawable/ic_block" />
+            <TextView style="@style/VideoMenuLabel" android:text="@string/menu_not_interested" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowDontRecommend"
+            style="@style/VideoMenuRow">
+            <ImageView style="@style/VideoMenuIcon" android:src="@drawable/ic_block" />
+            <TextView style="@style/VideoMenuLabel" android:text="@string/menu_dont_recommend_channel" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowReport"
+            style="@style/VideoMenuRow">
+            <ImageView style="@style/VideoMenuIcon" android:src="@drawable/ic_flag" />
+            <TextView style="@style/VideoMenuLabel" android:text="@string/menu_report" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

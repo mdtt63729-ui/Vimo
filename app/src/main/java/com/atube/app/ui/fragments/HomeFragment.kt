@@ -175,44 +175,37 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val videoId = video.url?.toID().orEmpty()
         if (videoId.isEmpty()) return
 
-        val popup = PopupMenu(requireContext(), anchor)
-        popup.menu.add(0, 7, 0, R.string.menu_play_next)
-        popup.menu.add(0, 8, 1, R.string.menu_play_last)
-        popup.menu.add(0, 1, 2, R.string.menu_save_to_playlist)
-        popup.menu.add(0, 2, 1, R.string.menu_download)
-        popup.menu.add(0, 3, 2, R.string.menu_share)
-        popup.menu.add(0, 4, 3, R.string.menu_not_interested)
-        popup.menu.add(0, 5, 4, R.string.menu_dont_recommend_channel)
-        popup.menu.add(0, 6, 5, R.string.menu_report)
-
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                7 -> {
+        com.atube.app.ui.views.VideoMenuPopup(anchor) { action ->
+            when (action) {
+                com.atube.app.ui.views.VideoMenuPopup.Action.PLAY_NEXT -> {
                     com.atube.app.util.PlayingQueue.addAsNext(video)
                     Toast.makeText(requireContext(), R.string.menu_queued_next, Toast.LENGTH_SHORT).show()
                 }
-                8 -> {
+                com.atube.app.ui.views.VideoMenuPopup.Action.PLAY_LAST -> {
                     com.atube.app.util.PlayingQueue.add(video)
                     Toast.makeText(requireContext(), R.string.menu_queued_last, Toast.LENGTH_SHORT).show()
                 }
-                1 -> AddToPlaylistDialog().apply {
-                    arguments = bundleOf(IntentData.videoInfo to video)
-                }.show(childFragmentManager, AddToPlaylistDialog::class.java.name)
-
-                2 -> DownloadDialog().apply {
+                com.atube.app.ui.views.VideoMenuPopup.Action.DOWNLOAD -> DownloadDialog().apply {
                     arguments = bundleOf(IntentData.videoId to videoId)
                 }.show(childFragmentManager, DownloadDialog::class.java.name)
 
-                3 -> shareLink(videoId)
-                4, 5 -> {
-                    homeViewModel.recordDismissal(videoId)
+                com.atube.app.ui.views.VideoMenuPopup.Action.SAVE -> AddToPlaylistDialog().apply {
+                    arguments = bundleOf(IntentData.videoInfo to video)
+                }.show(childFragmentManager, AddToPlaylistDialog::class.java.name)
+
+                com.atube.app.ui.views.VideoMenuPopup.Action.SHARE -> shareLink(videoId)
+
+                com.atube.app.ui.views.VideoMenuPopup.Action.NOT_INTERESTED -> {
+                    removeFromFeed(videoId)
                     Toast.makeText(requireContext(), R.string.menu_hidden, Toast.LENGTH_SHORT).show()
                 }
-                6 -> shareLink(videoId)
+                com.atube.app.ui.views.VideoMenuPopup.Action.DONT_RECOMMEND -> {
+                    removeFromFeed(videoId)
+                    Toast.makeText(requireContext(), R.string.menu_hidden, Toast.LENGTH_SHORT).show()
+                }
+                com.atube.app.ui.views.VideoMenuPopup.Action.REPORT -> shareLink(videoId)
             }
-            true
-        }
-        popup.show()
+        }.show()
     }
 
     private fun shareLink(videoId: String) {
