@@ -476,6 +476,10 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         row.downloadProgress.isIndeterminate = true
         row.downloadStatus.text = getString(R.string.fetch_starting)
         row.downloadCancel.setOnClickListener { cancelDownload(jobId) }
+        row.root.setOnLongClickListener {
+            showRowMenu(row.root, jobId)
+            true
+        }
 
         binding.downloadsContainer.addView(row.root)
         binding.downloadsSection.isVisible = true
@@ -524,6 +528,29 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         }
     }
 
+    /** Long press on a row: play it, or delete it. */
+    private fun showRowMenu(anchor: android.view.View, jobId: String) {
+        val popup = android.widget.PopupMenu(requireContext(), anchor)
+        popup.menu.add(0, 1, 0, R.string.fetch_play)
+        popup.menu.add(0, 2, 1, R.string.fetch_delete)
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                1 -> {
+                    val videoId = downloadedIds[jobId]
+                    if (videoId != null) {
+                        NavigationHelper.navigateVideo(
+                            requireContext(),
+                            PlayerData(videoId = videoId, isOffline = true)
+                        )
+                    }
+                }
+                2 -> deleteDownload(jobId)
+            }
+            true
+        }
+        popup.show()
+    }
+
     /** Removes a finished download: the row, the database entry and the file. */
     private fun deleteDownload(jobId: String) {
         val row = downloadRows[jobId] ?: return
@@ -564,8 +591,14 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             val percent = progress.percent.roundToInt()
             val speed = YtDlpFetchAdapter.formatSize(progress.speedBytesPerSecond)
             row.downloadSize.text = buildString {
-                append(percent)
-                append('%')
+                if (progress.totalBytes > 0) {
+                    append(YtDlpFetchAdapter.formatSize(progress.downloadedBytes))
+                    append(" of ")
+                    append(YtDlpFetchAdapter.formatSize(progress.totalBytes))
+                } else {
+                    append(percent)
+                    append('%')
+                }
                 if (speed.isNotBlank()) {
                     append(" · ")
                     append(speed)
@@ -653,10 +686,25 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             val audioExtensions = setOf("m4a", "mp3", "opus", "ogg", "webm", "aac", "wav")
             val isAudioFile = format.isAudio || file.extension.lowercase() in audioExtensions
 
+            // Save the thumbnail alongside the file. A download row could only
+            // show a picture if thumbnailPath pointed at something real, and the
+            // downloader never wrote one - that is why saved videos had no image.
+            val thumbFile = runCatching {
+                val url = fetchedVideo?.thumbnail?.takeIf { it.startsWith("http") }
+                    ?: return@runCatching null
+                val out = File(directory.toFile(), "thumb_${videoId}.jpg")
+                java.net.URL(url).openStream().use { input ->
+                    out.outputStream().use { input.copyTo(it) }
+                }
+                out.takeIf { it.length() > 0 }
+            }.getOrNull()
+
             dao.insertDownload(
                 Download(
                     videoId = videoId,
-                    title = currentTitle.ifBlank { file.nameWithoutExtension }
+                    title = currentTitle.ifBlank { file.nameWithoutExtension },
+                    thumbnailPath = thumbFile?.toPath(),
+                    uploader = fetchedVideo?.uploader.orEmpty()
                 )
             )
             dao.insertDownloadItem(

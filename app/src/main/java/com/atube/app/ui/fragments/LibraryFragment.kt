@@ -90,10 +90,9 @@ class LibraryFragment : DynamicLayoutManagerFragment(R.layout.fragment_library) 
             findNavController().navigate(R.id.action_libraryFragment_to_downloadsLibraryFragment)
         }
 
-        val navBarItems = NavBarHelper.getNavBarItemPreference(requireContext())
-        if (navBarItems.any { (itemId, isVisible) -> isVisible && itemId == R.id.downloadsFragment }) {
-            binding.downloads.isGone = true
-        }
+        // This used to hide the button whenever the Downloader tab was in the bottom
+        // bar, which is why the Library showed History but no Downloads.
+        binding.downloads.isVisible = true
 
         fetchPlaylists()
         initBookmarks()

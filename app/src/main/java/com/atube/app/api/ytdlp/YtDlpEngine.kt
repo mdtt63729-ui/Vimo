@@ -220,7 +220,10 @@ object YtDlpEngine {
             percent = json.optDouble("percent", 0.0).toFloat(),
             message = json.optString("message"),
             speedBytesPerSecond = json.optLong("speed"),
-            etaSeconds = if (json.isNull("eta")) null else json.optInt("eta")
+            etaSeconds = if (json.isNull("eta")) null else json.optInt("eta"),
+            // the bridge has been reporting these all along; nothing read them
+            downloadedBytes = json.optLong("downloaded_bytes"),
+            totalBytes = json.optLong("total_bytes")
         )
     }
 
@@ -236,5 +239,8 @@ data class YtDlpProgress(
     val percent: Float,
     val message: String,
     val speedBytesPerSecond: Long,
-    val etaSeconds: Int?
+    val etaSeconds: Int?,
+    /** Bytes already on disk, and the size the whole file will be. */
+    val downloadedBytes: Long = 0L,
+    val totalBytes: Long = 0L
 )

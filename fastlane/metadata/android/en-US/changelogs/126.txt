@@ -1,0 +1,7 @@
+Vimo 33.53
+
+- Downloads keep their thumbnail, so saved videos have a picture in the Downloader
+  and in the Library.
+- A download row shows how much of how much, plus the real speed.
+- Long press a download row for Play and Delete.
+- The Library shows its Downloads button again, next to History.

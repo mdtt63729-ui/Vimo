@@ -687,4 +687,6 @@
     <string name="tg_must_join">Join the Telegram channel to continue</string>
     <string name="fetch_deleted">Download deleted</string>
     <string name="menu_channel_blocked">Channel blocked from recommendations</string>
+    <string name="fetch_play">Play</string>
+    <string name="fetch_delete">Delete</string>
 </resources>
