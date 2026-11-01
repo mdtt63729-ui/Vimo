@@ -1,0 +1,5 @@
+Vimo 33.63
+
+- Create playlist is a bottom sheet again, built to the PRD: a fixed height that does
+  not change while open, blocks rising into place on a 40ms stagger, and no motion
+  at all when the system animator scale is off.

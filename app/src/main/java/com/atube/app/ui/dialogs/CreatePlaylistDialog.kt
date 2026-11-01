@@ -113,32 +113,53 @@ class CreatePlaylistDialog : com.google.android.material.bottomsheet.BottomSheet
         }
 
         // This one comes down from the top, and eases in rather than appearing.
-        val dialog = Dialog(requireContext()).apply {
+        // The PRD's sheet, from the bottom: a fixed height that never changes while it
+        // is open, a scrim that fades in with it, and the blocks rising into place one
+        // after another (120ms + 40ms per block, capped at eight, 350ms each).
+        val sheet = BottomSheetDialog(requireContext()).apply {
             setContentView(scroll)
-            window?.apply {
-                setBackgroundDrawableResource(android.R.color.transparent)
-                setGravity(android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL)
-                setLayout(
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-                )
+            behavior.isFitToContents = false
+            behavior.skipCollapsed = true
+            behavior.isDraggable = true
+            behavior.state = BottomSheetBehavior.STATE_EXPANDED
+            // fixed height: animating it to fit content is what breaks this design
+            behavior.peekHeight = (512 * resources.displayMetrics.density)
+                .toInt()
+                .coerceAtMost((resources.displayMetrics.heightPixels * 0.72f).toInt())
+        }
+
+        val animate = animatorScaleEnabled()
+        if (animate) {
+            val density = resources.displayMetrics.density
+            val container = binding.root as? android.view.ViewGroup
+            val blocks = (0 until (container?.childCount ?: 0)).mapNotNull { container?.getChildAt(it) }
+            blocks.take(8).forEachIndexed { index, block ->
+                block.alpha = 0f
+                // one and a half times its own height, as the reference does
+                block.translationY = block.height * 1.5f
+                block.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setStartDelay(120L + index * 40L)
+                    .setDuration(350L)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .start()
             }
         }
 
-        val density = resources.displayMetrics.density
-        scroll.alpha = 0f
-        scroll.translationY = -48f * density
-        scroll.animate()
-            .alpha(1f)
-            .translationY(0f)
-            .setDuration(340L)
-            .setInterpolator(android.view.animation.OvershootInterpolator(0.9f))
-            .start()
-
-        return dialog
+        return sheet
     }
 
     companion object {
         const val CREATE_PLAYLIST_DIALOG_REQUEST_KEY = "create_playlist_dialog_request_key"
     }
+
+    /** The PRD requires the system animator scale to be honoured: zero means no motion. */
+    private fun animatorScaleEnabled(): Boolean = runCatching {
+        android.provider.Settings.Global.getFloat(
+            requireContext().contentResolver,
+            android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+            1f
+        ) > 0f
+    }.getOrDefault(true)
 }
