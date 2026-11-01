@@ -11,7 +11,9 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.graphics.drawable.toBitmap
 import com.atube.app.R
 import java.io.File
 
@@ -39,13 +41,8 @@ object UpdateInstaller {
             .setStyle(
                 NotificationCompat.BigPictureStyle()
                     .bigPicture(
-                        androidx.core.graphics.drawable.toBitmap(
-                            androidx.core.content.ContextCompat.getDrawable(
-                                context, R.mipmap.ic_launcher
-                            )!!
-                        )
+                        ContextCompat.getDrawable(context, R.mipmap.ic_launcher)!!.toBitmap()
                     )
-                    .setBigContentTitle(context.getString(R.string.update_notification_title))
             )
             .setAutoCancel(true)
             .setContentIntent(pending)
