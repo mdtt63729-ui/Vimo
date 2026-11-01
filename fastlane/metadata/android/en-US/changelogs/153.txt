@@ -1,0 +1,4 @@
+Vimo 33.80
+
+- The Downloader's spacing sits on one 8dp grid now, so the header, the link field, the
+  Fetch button, the preview and the quality rows no longer look unevenly spaced.

@@ -13,9 +13,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingStart="20dp"
-        android:paddingTop="14dp"
-        android:paddingEnd="20dp">
+        android:paddingStart="24dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="24dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -28,7 +28,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
+            android:layout_marginTop="8dp"
             android:text="@string/dl_subtitle"
             android:textColor="?android:attr/textColorSecondary"
             android:textSize="14sp" />
@@ -37,7 +37,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="54dp"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="16dp"
             android:background="@drawable/bg_capsule"
             android:gravity="center_vertical"
             android:orientation="horizontal"
@@ -55,7 +55,7 @@
                 android:id="@+id/linkInput"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_marginStart="10dp"
+                android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:background="@android:color/transparent"
                 android:hint="@string/fetch_hint"
@@ -83,7 +83,7 @@
             android:id="@+id/fetchButton"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="8dp"
             android:background="@drawable/bg_capsule_selected"
             android:gravity="center"
             android:text="@string/dl_fetch"
@@ -96,7 +96,7 @@
             android:id="@+id/fetchSkeleton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="16dp"
             android:orientation="vertical"
             android:visibility="gone">
 
@@ -109,7 +109,7 @@
                 android:id="@+id/skeletonLine1"
                 android:layout_width="match_parent"
                 android:layout_height="16dp"
-                android:layout_marginTop="12dp" />
+                android:layout_marginTop="16dp" />
 
             <View
                 android:id="@+id/skeletonLine2"
@@ -153,7 +153,7 @@
             android:id="@+id/fetchEmpty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="16dp"
             android:background="@drawable/bg_capsule"
             android:gravity="center"
             android:padding="28dp"
@@ -183,7 +183,7 @@
                 android:id="@+id/previewTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="16dp"
                 android:ellipsize="end"
                 android:maxLines="2"
                 android:textColor="?android:attr/textColorPrimary"
@@ -194,7 +194,7 @@
                 android:id="@+id/previewDescription"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="8dp"
                 android:ellipsize="end"
                 android:maxLines="3"
                 android:textColor="?android:attr/textColorSecondary"
@@ -204,7 +204,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="16dp"
                 android:background="@drawable/bg_capsule"
                 android:orientation="horizontal"
                 android:padding="4dp">
@@ -238,14 +238,14 @@
                 android:id="@+id/qualityContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="16dp"
                 android:orientation="vertical" />
 
             <TextView
                 android:id="@+id/downloadButton"
                 android:layout_width="match_parent"
                 android:layout_height="54dp"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="16dp"
                 android:background="@drawable/bg_capsule_selected"
                 android:gravity="center"
                 android:text="@string/dl_download"
@@ -257,8 +257,8 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginTop="22dp"
-            android:layout_marginBottom="20dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="24dp"
             android:background="?attr/colorOutlineVariant" />
 
         <!-- downloads -->
@@ -289,7 +289,7 @@
                 android:id="@+id/downloadsContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="8dp"
                 android:orientation="vertical" />
         </LinearLayout>
 
@@ -297,7 +297,7 @@
             android:id="@+id/fetchEmptyMessage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="16dp"
             android:textColor="?android:attr/textColorSecondary"
             android:textSize="12sp"
             android:visibility="gone"
