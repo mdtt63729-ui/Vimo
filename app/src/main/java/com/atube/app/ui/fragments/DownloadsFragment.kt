@@ -999,26 +999,27 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                 )
             }
             rowFormats.forEach { format ->
-                val chip = (LayoutInflater.from(requireContext())
-                    .inflate(R.layout.chip_bouncy, row, false) as com.atube.app.ui.views.BouncyChip).apply {
-                    text = format.label
-                    isSelected = format == selectedFormat
-                    if (icon != null) {
-                        setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
-                        compoundDrawablePadding = (6 * density).toInt()
-                    }
-                    setOnClickListener {
-                        selectedFormat = format
-                        (it as? com.atube.app.ui.views.BouncyChip)?.isSelected = true
-                        fillQualityRow()
-                    }
-                    val params = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-                    params.marginEnd = (6 * density).toInt()
-                    layoutParams = params
+                // inflated, then configured step by step: chaining apply() on the cast
+                // sent the compiler's inference into a loop
+                val chip = LayoutInflater.from(requireContext())
+                    .inflate(R.layout.chip_bouncy, row, false) as com.atube.app.ui.views.BouncyChip
+                chip.text = format.label
+                chip.isSelected = format == selectedFormat
+                if (icon != null) {
+                    chip.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
+                    chip.compoundDrawablePadding = (6 * density).toInt()
                 }
+                chip.setOnClickListener {
+                    selectedFormat = format
+                    (it as? com.atube.app.ui.views.BouncyChip)?.isSelected = true
+                    fillQualityRow()
+                }
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                params.marginEnd = (6 * density).toInt()
+                chip.layoutParams = params
                 row.addView(chip)
             }
             container.addView(row)
