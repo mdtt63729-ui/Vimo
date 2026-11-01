@@ -1,0 +1,7 @@
+Vimo 33.64
+
+- Fixed the crash after pressing Fetch: the quality chip builds nothing and reads
+  nothing from the theme until it is attached, so constructing one from an
+  animation callback can no longer throw.
+- The loading skeleton breathes with a single animator instead of eight shimmer
+  animators, so it no longer stutters.

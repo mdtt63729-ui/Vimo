@@ -824,7 +824,30 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             binding.skeletonRow3,
             binding.skeletonRow4
         )
-        blocks.forEach { ShimmerHelper.applyShimmer(it, cornerRadiusDp = 10f) }
+        // One animator for the whole skeleton, not one per block. Eight independent
+        // shimmer animators were repainting every frame and that is what made the
+        // loading state stutter.
+        val shape = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = 10f * resources.displayMetrics.density
+            setColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.skeleton_bg))
+        }
+        blocks.forEach { it.background = shape.constantState?.newDrawable()?.mutate() }
+
+        binding.fetchSkeleton.animate().cancel()
+        binding.fetchSkeleton.alpha = 1f
+        binding.fetchSkeleton.animate()
+            .alpha(0.45f)
+            .setDuration(700L)
+            .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
+            .withEndAction {
+                binding.fetchSkeleton.animate()
+                    .alpha(1f)
+                    .setDuration(700L)
+                    .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
+                    .withEndAction { pulseSkeleton() }
+                    .start()
+            }
+            .start()
     }
 
     private fun showLoading() {
@@ -1570,5 +1593,25 @@ class PlaylistDownloadsFragmentPage : Fragment(R.layout.fragment_download_conten
             0 -> items
             else -> items.reversed()
         }
+    }
+
+    /** Keeps the skeleton breathing with a single animator while it is showing. */
+    private fun pulseSkeleton() {
+        if (_binding == null) return
+        binding.fetchSkeleton.animate().cancel()
+        binding.fetchSkeleton.animate()
+            .alpha(0.45f)
+            .setDuration(700L)
+            .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
+            .withEndAction {
+                if (_binding == null) return@withEndAction
+                binding.fetchSkeleton.animate()
+                    .alpha(1f)
+                    .setDuration(700L)
+                    .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
+                    .withEndAction { pulseSkeleton() }
+                    .start()
+            }
+            .start()
     }
 }
