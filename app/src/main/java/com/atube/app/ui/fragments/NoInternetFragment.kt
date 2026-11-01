@@ -25,7 +25,8 @@ class NoInternetFragment: Fragment(R.layout.fragment_nointernet) {
         }
 
         binding.downloads.setOnClickListener {
-            findNavController().navigate(R.id.downloadsFragment)
+            // the library's downloads, not the Downloader tab
+            findNavController().navigate(R.id.downloadsLibraryFragment)
         }
     }
 }

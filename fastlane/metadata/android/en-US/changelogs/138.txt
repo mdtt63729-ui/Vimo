@@ -1,0 +1,4 @@
+Vimo 33.65
+
+- The offline screen's Download button opens Library > Downloads again.
+- A download row has its own three-dot, and long press opens the same menu.

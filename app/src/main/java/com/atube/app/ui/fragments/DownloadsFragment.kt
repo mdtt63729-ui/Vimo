@@ -488,6 +488,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         row.downloadProgress.isIndeterminate = true
         row.downloadStatus.text = getString(R.string.fetch_starting)
         row.downloadCancel.setOnClickListener { cancelDownload(jobId) }
+        row.downloadMore.setOnClickListener { showRowMenu(it, jobId) }
+        row.downloadMore.isVisible = false
         row.root.setOnLongClickListener {
             showRowMenu(row.root, jobId)
             true
@@ -646,7 +648,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         row.downloadStatus.text = getString(
             if (ok) R.string.fetch_saved else R.string.fetch_failed_download
         )
-        row.downloadCancel.isVisible = true
+        row.downloadCancel.isVisible = false
+        row.downloadMore.isVisible = true
         row.downloadCancel.setImageResource(R.drawable.ic_close)
         row.downloadCancel.setOnClickListener { deleteDownload(jobId) }
         if (ok) row.downloadStatus.text = getString(R.string.fetch_saved)

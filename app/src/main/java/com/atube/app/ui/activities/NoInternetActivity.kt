@@ -62,8 +62,8 @@ class NoInternetActivity : AbstractPlayerHostActivity() {
             override fun onMenuItemActionExpand(p0: MenuItem): Boolean {
                 // automatically navigate to the downloads fragment when the user clicks the search bar
                 val navController = binding.fragment.findNavController()
-                if (navController.currentDestination?.id != R.id.downloadsFragment) {
-                    navController.navigate(R.id.downloadsFragment)
+                if (navController.currentDestination?.id != R.id.downloadsLibraryFragment) {
+                    navController.navigate(R.id.downloadsLibraryFragment)
                 }
                 return true
             }

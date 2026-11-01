@@ -60,6 +60,15 @@
             android:contentDescription="@string/fetch_cancel"
             android:src="@drawable/ic_close"
             app:tint="?attr/colorOnSurfaceVariant" />
+
+        <ImageButton
+            android:id="@+id/downloadMore"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/menu_more"
+            android:src="@drawable/ic_more_vert"
+            app:tint="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
 
     <com.google.android.material.progressindicator.LinearProgressIndicator
