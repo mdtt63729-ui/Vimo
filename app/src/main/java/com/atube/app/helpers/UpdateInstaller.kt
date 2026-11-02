@@ -54,37 +54,48 @@ object UpdateInstaller {
         }
     }
 
-    /** Starts the APK download; installation follows automatically when it lands. */
+    /**
+     * Downloads the APK and hands it to the installer.
+     *
+     * This used to go through DownloadManager with setDestinationUri, which quietly
+     * does nothing for a path on the app's external files dir on modern Android - the
+     * popup closed and no file ever appeared. The stream is written here instead, so
+     * the progress is ours and the file is definitely there at the end.
+     */
     fun download(context: Context, apkUrl: String, version: String) {
-        val dir = File(context.getExternalFilesDir(null), "updates").apply { mkdirs() }
-        val target = File(dir, "Vimo-$version.apk")
-        if (target.exists()) target.delete()
+        val app = context.applicationContext
+        Thread {
+            runCatching {
+                val dir = File(app.getExternalFilesDir(null), "updates").apply { mkdirs() }
+                val target = File(dir, "Vimo-$version.apk")
+                if (target.exists()) target.delete()
 
-        val request = DownloadManager.Request(Uri.parse(apkUrl))
-            .setTitle(context.getString(R.string.update_downloading))
-            .setDestinationUri(Uri.fromFile(target))
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-            .setMimeType("application/vnd.android.package-archive")
+                val request = okhttp3.Request.Builder()
+                    .url(apkUrl)
+                    .header("Accept", "application/octet-stream")
+                    .build()
 
-        val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        val id = runCatching { manager.enqueue(request) }.getOrNull() ?: return
+                okhttp3.OkHttpClient.Builder()
+                    .followRedirects(true)
+                    .followSslRedirects(true)
+                    .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
+                    .newCall(request)
+                    .execute()
+                    .use { response ->
+                        if (!response.isSuccessful) return@runCatching
+                        val body = response.body ?: return@runCatching
+                        body.byteStream().use { input ->
+                            target.outputStream().use { output -> input.copyTo(output) }
+                        }
+                    }
 
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(ctx: Context, intent: Intent) {
-                if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L) != id) return
-                runCatching { ctx.unregisterReceiver(this) }
-                if (target.exists()) install(ctx, target)
+                if (target.exists() && target.length() > 0) {
+                    android.os.Handler(app.mainLooper).post { install(app, target) }
+                }
             }
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(
-                receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-                Context.RECEIVER_EXPORTED
-            )
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            context.registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
-        }
+        }.start()
     }
 
     private fun install(context: Context, apk: File) {

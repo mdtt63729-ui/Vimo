@@ -538,9 +538,9 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         if (format.pageUrl.isBlank()) return
 
         val jobId = "vimo_" + System.currentTimeMillis()
+        // everything fetched from a link lands in Vimo/downloader
         val directory = DownloadHelper.getDownloadDir(
-            requireContext(),
-            if (format.isAudio) DownloadHelper.AUDIO_DIR else DownloadHelper.VIDEO_DIR
+            requireContext(), DownloadHelper.DOWNLOADER_DIR
         )
 
         val row = ItemYtdlpDownloadBinding.inflate(

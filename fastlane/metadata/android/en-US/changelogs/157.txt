@@ -1,0 +1,6 @@
+Vimo 33.84
+
+- The in-app update actually downloads now: the APK is streamed and handed to the
+  installer instead of going through DownloadManager, which silently did nothing.
+- Downloads live under one Vimo folder: Vimo/downloader for what the Downloader page
+  fetched, Vimo/yt-downloader for what the app fetched itself.

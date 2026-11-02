@@ -32,8 +32,11 @@ import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
 
 object DownloadHelper {
-    const val VIDEO_DIR = "video"
-    const val AUDIO_DIR = "audio"
+    const val VIDEO_DIR = "yt-downloader"
+    const val AUDIO_DIR = "yt-downloader"
+
+    /** What the Downloader page saves, kept apart from the app's own downloads. */
+    const val DOWNLOADER_DIR = "downloader"
     const val SUBTITLE_DIR = "subtitle"
     const val THUMBNAIL_DIR = "thumbnail"
     const val PLAYLIST_THUMBNAIL_DIR = "playlist_thumbnail"
@@ -42,13 +45,34 @@ object DownloadHelper {
     const val MAX_CONCURRENT_DOWNLOADS = 6
     private const val VIDEO_MIMETYPE = "video/*"
 
+    /**
+     * Everything the app saves lives under a single Vimo folder on the phone's storage:
+     * /storage/emulated/0/Vimo/<path>. "downloader" holds what came from the Downloader
+     * page, "yt-downloader" holds what the app itself fetched. If that public folder
+     * cannot be written - scoped storage on a newer Android - it falls back to the app's
+     * own external folder so a download never fails for want of a directory.
+     */
     fun getDownloadDir(context: Context, path: String): Path {
-        val storageDir =
-            try {
-                context.getExternalFilesDir(null)!!
-            } catch (e: Exception) {
-                context.filesDir
-            }
+        val publicRoot = runCatching {
+            android.os.Environment
+                .getExternalStorageDirectory()
+                .resolve("Vimo")
+                .resolve(path)
+        }.getOrNull()
+
+        if (publicRoot != null && runCatching {
+                publicRoot.mkdirs()
+                publicRoot.isDirectory && publicRoot.canWrite()
+            }.getOrDefault(false)
+        ) {
+            return publicRoot.toPath()
+        }
+
+        val storageDir = try {
+            context.getExternalFilesDir(null)!!
+        } catch (e: Exception) {
+            context.filesDir
+        }
         return (storageDir.toPath() / path).createDirectories()
     }
 
