@@ -914,7 +914,17 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             Snackbar.make(binding.root, R.string.fetch_clipboard_empty, Snackbar.LENGTH_SHORT).show()
             return
         }
+        binding.linkInput.setText("")
+        binding.linkInput.alpha = 0.72f
+        binding.linkInput.scaleX = 0.985f
+        binding.linkInput.animate().cancel()
+        binding.linkInput.animate()
+            .alpha(1f).scaleX(1f)
+            .setDuration(260L)
+            .setInterpolator(android.view.animation.OvershootInterpolator(0.7f))
+            .start()
         binding.linkInput.setText(text)
+        binding.linkInput.setSelection(binding.linkInput.text?.length ?: 0)
         // A pasted link can be longer than the field keeps, and the emoji2 builder
         // reports a shorter length than the raw string, so setting the cursor to the
         // raw length threw "setSpan ... ends beyond length 5000". Put the cursor at
@@ -1006,7 +1016,19 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         ImageHelper.loadImageHighQuality(video.thumbnail, binding.previewThumbnail)
 
         // video: the streams that already carry picture and sound
-        videoFormats = items.filterIsInstance<YtDlpResult.Format>().filter { !it.isAudio }
+        videoFormats = items.filterIsInstance<YtDlpResult.Format>()
+            .filter { !it.isAudio }
+            // One capsule per actual resolution, regardless of codec/container.
+            .distinctBy { format ->
+                if (format.label.contains("best", ignoreCase = true)) "best"
+                else Regex("(\\d{3,4})p", RegexOption.IGNORE_CASE)
+                    .find(format.label)?.groupValues?.getOrNull(1)?.toIntOrNull()?.toString()
+                    ?: format.label.substringBefore(" · ").lowercase()
+            }
+            .sortedByDescending { format ->
+                Regex("(\\d{3,4})p", RegexOption.IGNORE_CASE)
+                    .find(format.label)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: Int.MAX_VALUE
+            }
         // audio: the same video turned into a song by the bundled ffmpeg
         // The audio tab is where the bitrate is chosen - the video tab never offers
         // one, because there the sound is whatever the site pairs with the picture.
@@ -1100,8 +1122,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                 indicator.animate().cancel()
                 indicator.animate()
                     .translationX(target)
-                    .setDuration(420L)
-                    .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1f, 0.36f, 1f))
+                    .setDuration(520L)
+                    .setInterpolator(android.view.animation.OvershootInterpolator(0.72f))
                     .start()
             }
         }
@@ -1138,7 +1160,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         row.animate()
             .alpha(0f)
             .translationY(-lift)
-            .setDuration(170L)
+            .setDuration(210L)
+            .setInterpolator(android.view.animation.AccelerateDecelerateInterpolator())
             .withEndAction {
                 if (_binding == null) return@withEndAction
                 fillQualityRow()
@@ -1147,8 +1170,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                 row.animate()
                     .alpha(1f)
                     .translationY(0f)
-                    .setDuration(300L)
-                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .setDuration(390L)
+                    .setInterpolator(android.view.animation.OvershootInterpolator(0.28f))
                     .start()
             }
             .start()

@@ -1,0 +1,4 @@
+Vimo 33.83
+
+- The owner's fixed build: download retry through the resolver, the update sheet and the
+  playlist sheet corrected, the chip tidied, and the paste icon redrawn.

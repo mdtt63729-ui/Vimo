@@ -287,9 +287,38 @@ def start_download(url, format_selector, output_dir, job_id, headers_json=""):
     }
     opts.update(_ffmpeg_opts())
     _write_progress(job_id, {"status": "starting", "percent": 0, "message": "Starting download"})
+    # Remember existing files so a successful yt-dlp job can still be registered
+    # when an extractor omits filepath/requested_downloads in its final metadata.
+    before_files = set(os.listdir(output_dir))
     try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=True)
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+        except Exception as first_error:
+            # Format IDs can expire/change between preview and download (especially
+            # adaptive/mobile extractors). Retry with yt-dlp's best compatible
+            # video+audio pair, then a single-file best format, rather than failing
+            # every quality chip with "did not download".
+            retry_errors = [str(first_error)]
+            recovered = False
+            for fallback_selector in ("bv*+ba/b", "best"):
+                retry_opts = dict(opts)
+                retry_opts["format"] = fallback_selector
+                try:
+                    _write_progress(job_id, {
+                        "status": "downloading", "percent": 0,
+                        "message": "Refreshing stream and retrying"
+                    })
+                    with yt_dlp.YoutubeDL(retry_opts) as ydl:
+                        info = ydl.extract_info(url, download=True)
+                    recovered = bool(info)
+                    if recovered:
+                        break
+                except Exception as retry_error:
+                    retry_errors.append(str(retry_error))
+            if not recovered:
+                raise RuntimeError("Selected stream failed; retry failed: " +
+                                   " | ".join(retry_errors)[-700:])
         if job_id in _cancelled:
             _write_progress(job_id, {"status": "cancelled", "message": "Cancelled"})
             return json.dumps({"ok": False, "error": "Cancelled"})
@@ -315,7 +344,24 @@ def start_download(url, format_selector, output_dir, job_id, headers_json=""):
                         produced = requested[0].get("filepath")
             except Exception:
                 produced = None
-            return json.dumps({"ok": True, "path": produced})
+            # Some extractors return an info object without the final filepath.
+            # Resolve the actual newly-created media file instead of reporting a
+            # false failure after bytes were successfully downloaded.
+            if not produced or not os.path.isfile(produced) or os.path.getsize(produced) <= 0:
+                ignored_suffixes = (".part", ".ytdl", ".temp", ".json", ".description", ".jpg", ".webp", ".png")
+                candidates = []
+                for name in os.listdir(output_dir):
+                    path = os.path.join(output_dir, name)
+                    if name in before_files or not os.path.isfile(path):
+                        continue
+                    if name.endswith(ignored_suffixes) or os.path.getsize(path) <= 0:
+                        continue
+                    candidates.append(path)
+                if candidates:
+                    produced = max(candidates, key=os.path.getmtime)
+            if produced and os.path.isfile(produced) and os.path.getsize(produced) > 0:
+                return json.dumps({"ok": True, "path": produced})
+            raise RuntimeError("yt-dlp finished but no completed media file was found.")
         _write_progress(job_id, {"status": "error", "message": "The download did not complete"})
         return json.dumps({"ok": False, "error": "The download did not complete."})
     except Exception as e:

@@ -112,49 +112,42 @@ class CreatePlaylistDialog : com.google.android.material.bottomsheet.BottomSheet
             addView(binding.root)
         }
 
-        // This one comes down from the top, and eases in rather than appearing.
-        // The PRD's sheet, from the bottom: a fixed height that never changes while it
-        // is open, a scrim that fades in with it, and the blocks rising into place one
-        // after another (120ms + 40ms per block, capped at eight, 350ms each).
+        // Match the native Echo-style bottom sheet: expand from the bottom, then
+        // bring the content in with a short, staggered fade-and-rise animation.
         val sheet = BottomSheetDialog(requireContext()).apply {
             setContentView(scroll)
-            behavior.isFitToContents = false
+            behavior.isFitToContents = true
             behavior.skipCollapsed = true
             behavior.isDraggable = true
             behavior.state = BottomSheetBehavior.STATE_EXPANDED
-            // fixed height: animating it to fit content is what breaks this design
-            behavior.peekHeight = (512 * resources.displayMetrics.density)
-                .toInt()
-                .coerceAtMost((resources.displayMetrics.heightPixels * 0.72f).toInt())
+            window?.setBackgroundDrawableResource(android.R.color.transparent)
         }
 
         // While the name is being typed the sheet takes the whole screen, so the
         // fields are never hidden behind the keyboard; it settles back when focus goes.
         val nameField = scroll.findViewById<android.widget.EditText>(R.id.playlistName)
         nameField?.setOnFocusChangeListener { _, hasFocus ->
-            sheet.behavior.state = if (hasFocus) {
-                BottomSheetBehavior.STATE_EXPANDED
-            } else {
-                BottomSheetBehavior.STATE_COLLAPSED
-            }
+            if (hasFocus) sheet.behavior.state = BottomSheetBehavior.STATE_EXPANDED
         }
 
         val animate = animatorScaleEnabled()
         if (animate) {
-            val density = resources.displayMetrics.density
-            val container = binding.root as? android.view.ViewGroup
-            val blocks = (0 until (container?.childCount ?: 0)).mapNotNull { container?.getChildAt(it) }
-            blocks.take(8).forEachIndexed { index, block ->
-                block.alpha = 0f
-                // one and a half times its own height, as the reference does
-                block.translationY = block.height * 1.5f
-                block.animate()
-                    .alpha(1f)
-                    .translationY(0f)
-                    .setStartDelay(120L + index * 40L)
-                    .setDuration(350L)
-                    .setInterpolator(android.view.animation.DecelerateInterpolator())
-                    .start()
+            scroll.post {
+                val container = binding.root as? android.view.ViewGroup
+                val blocks = (0 until (container?.childCount ?: 0))
+                    .mapNotNull { container?.getChildAt(it) }
+                blocks.take(8).forEachIndexed { index, block ->
+                    block.animate().cancel()
+                    block.alpha = 0f
+                    block.translationY = (block.height.coerceAtLeast(1) * 0.18f)
+                    block.animate()
+                        .alpha(1f)
+                        .translationY(0f)
+                        .setStartDelay(80L + index * 35L)
+                        .setDuration(320L)
+                        .setInterpolator(android.view.animation.DecelerateInterpolator())
+                        .start()
+                }
             }
         }
 

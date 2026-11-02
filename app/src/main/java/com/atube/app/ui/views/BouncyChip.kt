@@ -95,14 +95,16 @@ class BouncyChip @JvmOverloads constructor(
             if (theme.resolveAttribute(attr, value, true)) value.data else fallback
         }.getOrDefault(fallback)
 
-        // The downloader keeps its own light-blue Material 3 palette regardless
-        // of the app-wide theme variant selected elsewhere in settings.
-        selectedColor = Color.rgb(40, 118, 189)
-        onSelectedColor = Color.WHITE
-        unselectedColor = Color.WHITE
-        outlineColor = Color.rgb(201, 221, 240)
-        normalTextColor = Color.rgb(54, 92, 127)
+        // Resolve the app's day/night downloader palette from resources. These
+        // resources have matching values/values-night entries, so chips follow the
+        // same theme as the rest of the screen instead of staying white in dark mode.
+        selectedColor = androidx.core.content.ContextCompat.getColor(context, com.atube.app.R.color.dl_blue)
+        unselectedColor = androidx.core.content.ContextCompat.getColor(context, com.atube.app.R.color.dl_card)
+        outlineColor = androidx.core.content.ContextCompat.getColor(context, com.atube.app.R.color.dl_blue_border)
+        normalTextColor = androidx.core.content.ContextCompat.getColor(context, com.atube.app.R.color.dl_muted)
+        onSelectedColor = androidx.core.content.ContextCompat.getColor(context, com.atube.app.R.color.dl_page_background)
         backgroundShape?.setStroke((1 * density).toInt().coerceAtLeast(1), outlineColor)
+        backgroundShape?.setColor(if (isSelected) selectedColor else unselectedColor)
 
 
         scaleSpring = SpringAnimation(FloatValueHolder(1f)).apply {
