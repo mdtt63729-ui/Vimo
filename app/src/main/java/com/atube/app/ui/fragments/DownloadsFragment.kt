@@ -18,6 +18,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import com.atube.app.extensions.toID
 import com.atube.app.helpers.ImageHelper
 import android.view.Gravity
 import android.graphics.Color
