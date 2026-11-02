@@ -21,7 +21,9 @@ sealed class YtDlpResult {
         val views: Long,
         val url: String,
         /** width / height of the real video, so the card keeps its shape. */
-        val aspect: Float = 16f / 9f
+        val aspect: Float = 16f / 9f,
+        /** True for a direct image URL; preserve the complete image rather than crop it. */
+        val isImage: Boolean = false
     ) : YtDlpResult()
 
     data class Format(

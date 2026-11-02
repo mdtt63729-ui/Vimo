@@ -1,0 +1,5 @@
+Vimo 33.81
+
+- The audited fixes the project owner prepared: the Downloader is rebuilt on its own
+  card and capsule shapes, the chip and the fetch flow are corrected, and the engine
+  reports its state properly.

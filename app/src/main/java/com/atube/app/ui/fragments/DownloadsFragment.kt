@@ -173,7 +173,8 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         }
 
         shimmerSkeleton()
-        showEmpty(getString(R.string.fetch_empty_message))
+        binding.fetchEmpty.isGone = true
+        binding.fetchEmptyMessage.isGone = true
         loadPreviousDownloads()
 
         // Starting Chaquopy takes a few seconds the first time. Do it now, off the
@@ -204,6 +205,9 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
 
     private fun fetchLink(url: String) {
         runFetch {
+            // Direct image URLs are not necessarily supported by yt-dlp extractors.
+            // Detect them first and expose the original file as a download option.
+            directImageResult(url)?.let { return@runFetch it }
             try {
                 val json = YtDlpEngine.extractInfo(url)
                 if (!json.optBoolean("ok")) {
@@ -221,6 +225,57 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                     ?: throw blocked
                 itemsFromInnerTube(videoId, streams, url)
             }
+        }
+    }
+
+    /** Read direct image URL metadata without re-encoding or reducing its quality. */
+    private fun directImageResult(url: String): List<YtDlpResult>? {
+        val connection = runCatching {
+            (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 12000
+                readTimeout = 12000
+                instanceFollowRedirects = true
+                requestMethod = "GET"
+                setRequestProperty("Range", "bytes=0-65535")
+                setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130 Mobile Safari/537.36")
+                connect()
+            }
+        }.getOrNull() ?: return null
+        return try {
+            val mime = connection.contentType?.substringBefore(';')?.lowercase().orEmpty()
+            val path = runCatching { java.net.URL(connection.url.toString()).path }.getOrDefault("")
+            val ext = path.substringAfterLast('.', "").lowercase()
+            val isImage = mime.startsWith("image/") || ext in setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "avif", "heic", "heif", "tif", "tiff")
+            if (!isImage) return null
+            val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            runCatching { connection.inputStream.use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) } }
+            val width = bounds.outWidth.takeIf { it > 0 } ?: 4
+            val height = bounds.outHeight.takeIf { it > 0 } ?: 3
+            val fileName = path.substringAfterLast('/').substringBefore('?').ifBlank { "image.$ext" }
+            currentTitle = fileName
+            listOf(
+                YtDlpResult.Video(
+                    id = "image_${url.hashCode().toUInt().toString(16)}",
+                    title = fileName,
+                    uploader = "Original image · ${width} × ${height}",
+                    duration = 0L,
+                    thumbnail = connection.url.toString(),
+                    views = 0L,
+                    url = connection.url.toString(),
+                    aspect = width.toFloat() / height.toFloat(),
+                    isImage = true
+                ),
+                YtDlpResult.Format(
+                    label = "Download original · ${width} × ${height}",
+                    detail = "Original image quality · No recompression",
+                    directUrl = connection.url.toString(),
+                    formatId = "direct",
+                    pageUrl = connection.url.toString(),
+                    isAudio = false
+                )
+            )
+        } finally {
+            connection.disconnect()
         }
     }
 
@@ -296,14 +351,10 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         fetchJob?.cancel()
         skeletonJob?.cancel()
 
-        // The skeleton used to appear the instant Fetch was pressed, so a fetch
-        // that failed in a few milliseconds flashed the placeholder on and off and
-        // looked like nothing happened. It now waits 250 ms, and the buttons stay
-        // disabled until the attempt really finishes.
-        skeletonJob = viewLifecycleOwner.lifecycleScope.launch {
-            delay(250)
-            if (fetchJob?.isActive == true) showLoading()
-        }
+        // Show the Home feed's shimmer skeleton immediately when Analyse is tapped.
+        // The same ShimmerHelper is used by the Home cards, so the loading treatment
+        // is identical and the user always gets clear feedback for the request.
+        showLoading()
         setFetching(true)
 
         fetchJob = viewLifecycleOwner.lifecycleScope.launch {
@@ -333,7 +384,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     private fun setFetching(running: Boolean) {
         binding.fetchButton.isEnabled = !running
         binding.fetchButton.text = getString(
-            if (running) R.string.fetch_working else R.string.fetch
+            if (running) R.string.fetch_working else R.string.dl_fetch
         )
     }
 
@@ -368,9 +419,10 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             aspect = aspect
         )
 
-        // One-tap best quality. Merging separate video and audio streams needs the
-        // bundled ffmpeg; without it yt-dlp would fail, so fall back to the best
-        // single file that already carries both.
+        // Prepare the app-bundled FFmpeg before checking capabilities. Merely
+        // asking ffmpegAvailable() does not configure yt-dlp's ffmpeg_location.
+        // Adaptive YouTube formats (e.g. 720p/1080p) need this to mux video+audio.
+        YtDlpEngine.prepare(requireContext())
         val canMerge = YtDlpEngine.ffmpegAvailable()
         val isDirectMedia = json.optString("extractor") == "pinterest"
         if (!isDirectMedia) out += YtDlpResult.Format(
@@ -432,15 +484,16 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             // A video choice always means picture plus sound, the way the other app
             // does it: a video-only stream is paired with the best audio and the two
             // are merged, so the file that lands is a normal video with sound.
-            val selector = if (hasVideo && !hasAudio) "$formatId+bestaudio" else formatId
+            val selector = if (hasVideo && !hasAudio) "$formatId+bestaudio/best" else formatId
 
-            // a video-only stream is not offered as its own chip: the "Best
-            // available" row already downloads picture plus sound, and a silent
-            // quality in the list only confuses the choice
-            // Video mode lists MP4 only. A video-only stream is kept: it is paired
-            // with the best audio at download time, and on YouTube every 720p and
-            // 1080p row is video-only, so dropping them left only Best available.
-            if (hasVideo && !ext.equals("mp4", ignoreCase = true)) continue
+            // Every selectable video quality must result in a playable file with
+            // sound. Adaptive video-only streams require FFmpeg to mux the selected
+            // video stream with the best compatible audio stream. If FFmpeg is not
+            // bundled, hide those choices rather than offer a guaranteed failure.
+            if (hasVideo && !hasAudio && !canMerge) continue
+            // Do not restrict video qualities to MP4 source formats. yt-dlp/FFmpeg
+            // can mux compatible WebM/AV1/VP9 source streams into the requested MP4
+            // container when supported by the installed FFmpeg build.
 
             out += YtDlpResult.Format(
                 label = label,
@@ -528,10 +581,9 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             val produced: String? = withContext(Dispatchers.IO) {
                 if (format.convertToMp3) {
                     val bitrate = format.formatId.substringAfter("mp3:", "192")
-                    if (YtDlpEngine.startAudioDownload(
-                            format.pageUrl, directory.toFile(), jobId, bitrate
-                        )
-                    ) "" else null
+                    YtDlpEngine.startAudioDownload(
+                        format.pageUrl, directory.toFile(), jobId, bitrate
+                    )
                 } else if (format.formatId == "direct") {
                     // A direct URL (Pinterest media, or an InnerTube stream) is
                     // downloaded as-is. InnerTube URLs only answer to the headers
@@ -548,22 +600,12 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                     val viaEngine = YtDlpEngine.startDownload(
                         format.pageUrl, format.formatId, directory.toFile(), jobId
                     )
-                    // The engine can extract fine and still fail to fetch: YouTube
-                    // refuses its downloader on many networks. Every format carries the
-                    // stream's own URL, so when the engine gives up the file is pulled
-                    // straight from that URL instead of failing outright.
-                    if (viaEngine != null) {
-                        viaEngine
-                    } else if (format.directUrl.isNotBlank()) {
-                        val headers = com.atube.app.api.muso.MusoStreamResolver
-                            .headersFor(format.directUrl)
-                            .let { map ->
-                                if (map.isEmpty()) "" else org.json.JSONObject(map as Map<*, *>).toString()
-                            }
-                        YtDlpEngine.startDownload(
-                            format.directUrl, "direct", directory.toFile(), jobId, headers
-                        )
-                    } else null
+                    // Keep format selection authoritative. A direct-URL fallback here
+                    // silently downloads a video-only adaptive stream without its audio.
+                    // yt-dlp must handle the selected format so it can fetch the matching
+                    // audio stream and mux both tracks with FFmpeg. If that fails, report
+                    // the failure instead of saving a misleading silent video.
+                    viaEngine
                 }
             }
             poller.cancel()
@@ -785,17 +827,24 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                 val bytes = entry.downloadItems.sumOf { it.downloadSize }
                     .takeIf { it > 0 }
                     ?: entry.downloadItems.sumOf { runCatching { it.path.fileSize() }.getOrDefault(0L) }
-                addSavedRow(entry.download.videoId, entry.download.title, bytes)
+                addSavedRow(entry.download.videoId, entry.download.title, bytes, entry.download.thumbnailPath?.toString())
             }
             binding.downloadsSection.isVisible = true
         }
     }
 
-    private fun addSavedRow(videoId: String, title: String, bytes: Long = 0L) {
+    private fun addSavedRow(videoId: String, title: String, bytes: Long = 0L, thumbnailPath: String? = null) {
         val row = ItemYtdlpDownloadBinding.inflate(
             LayoutInflater.from(requireContext()), binding.downloadsContainer, false
         )
         row.downloadTitle.text = title.ifBlank { getString(R.string.fetch_saved) }
+        // Saved thumbnail is loaded from the local file, so it remains visible offline.
+        thumbnailPath?.let { path ->
+            val imageFile = File(path)
+            if (imageFile.isFile && imageFile.length() > 0L) {
+                row.downloadThumb.setImageURI(android.net.Uri.fromFile(imageFile))
+            }
+        }
         row.downloadProgress.isVisible = false
         row.downloadCancel.isVisible = false
         row.downloadMore.isVisible = true
@@ -869,7 +918,17 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     }
 
     private fun showLoading() {
-        binding.fetchSkeleton.isVisible = true
+        val skeleton = binding.fetchSkeleton
+        skeleton.animate().cancel()
+        if (!skeleton.isVisible) {
+            skeleton.alpha = 0f
+            skeleton.isVisible = true
+            skeleton.animate()
+                .alpha(1f)
+                .setDuration(180L)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
+        }
         binding.fetchEmpty.isVisible = false
         binding.previewSection.isVisible = false
     }
@@ -877,8 +936,9 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
     private fun showEmpty(message: String) {
         binding.fetchSkeleton.isVisible = false
         binding.previewSection.isVisible = false
+        binding.fetchEmpty.text = message
         binding.fetchEmpty.isVisible = true
-        binding.fetchEmptyMessage.text = message
+        binding.fetchEmptyMessage.isGone = true
     }
 
     /**
@@ -904,13 +964,20 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         }
 
         val density = resources.displayMetrics.density
-        val width = (resources.displayMetrics.widthPixels - (40 * density).toInt()).coerceAtLeast(1)
-        val ratio = video.aspect.takeIf { it in 0.4f..2.5f } ?: (16f / 9f)
-        val height = (width / ratio).toInt().coerceIn((180 * density).toInt(), (520 * density).toInt())
+        val estimatedWidth = (resources.displayMetrics.widthPixels - (68 * density).toInt()).coerceAtLeast(1)
+        val width = binding.previewSection.width
+            .takeIf { it > 0 }
+            ?.let { (it - binding.previewSection.paddingLeft - binding.previewSection.paddingRight).coerceAtLeast(1) }
+            ?: estimatedWidth
+        val ratio = video.aspect.takeIf { it in 0.12f..8f } ?: (16f / 9f)
+        val minHeight = ((if (video.isImage) 80 else 160) * density).toInt()
+        val maxHeight = ((if (video.isImage) 560 else 420) * density).toInt()
+        val height = (width / ratio).toInt().coerceIn(minHeight, maxHeight)
         binding.previewThumbnail.layoutParams = binding.previewThumbnail.layoutParams.apply {
-            this.width = width
+            this.width = android.view.ViewGroup.LayoutParams.MATCH_PARENT
             this.height = height
         }
+        binding.previewThumbnail.scaleType = if (video.isImage) android.widget.ImageView.ScaleType.FIT_CENTER else android.widget.ImageView.ScaleType.CENTER_CROP
         ImageHelper.loadImageHighQuality(video.thumbnail, binding.previewThumbnail)
 
         // video: the streams that already carry picture and sound
@@ -918,7 +985,11 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         // audio: the same video turned into a song by the bundled ffmpeg
         // The audio tab is where the bitrate is chosen - the video tab never offers
         // one, because there the sound is whatever the site pairs with the picture.
-        audioFormats = listOf("320", "192", "128").map { bitrate ->
+        // Do not advertise MP3 conversion unless the packaged FFmpeg is actually
+        // available; yt-dlp's FFmpegExtractAudio postprocessor cannot work without it.
+        val audioConversionAvailable = YtDlpEngine.prepare(requireContext()) &&
+            YtDlpEngine.ffmpegAvailable()
+        audioFormats = if (audioConversionAvailable) listOf("320", "192", "128").map { bitrate ->
             YtDlpResult.Format(
                 label = "MP3 · $bitrate kbps",
                 detail = getString(R.string.dl_converted_mp3),
@@ -928,7 +999,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                 isAudio = true,
                 convertToMp3 = true
             )
-        }
+        } else emptyList()
 
         audioMode = false
         renderMode()
@@ -983,12 +1054,36 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         binding.audioMode.setCompoundDrawablesRelativeWithIntrinsicBounds(musicIcon, null, null, null)
         binding.audioMode.compoundDrawablePadding = (7 * densityForIcons).toInt()
 
-        binding.videoMode.setBackgroundResource(
-            if (audioMode) 0 else R.drawable.bg_capsule_selected
-        )
-        binding.audioMode.setBackgroundResource(
-            if (audioMode) R.drawable.bg_capsule_selected else 0
-        )
+        // A single blue capsule slides under the selected mode instead of two
+        // backgrounds swapping abruptly. Keep the indicator measured to the inner
+        // half-width so it remains accurate on narrow and wide devices.
+        binding.modeContainer.post {
+            if (_binding == null) return@post
+            val container = binding.modeContainer
+            val indicator = binding.modeIndicator
+            val slotWidth = ((container.width - container.paddingLeft - container.paddingRight) / 2)
+                .coerceAtLeast(1)
+            val params = indicator.layoutParams
+            val firstLayout = params.width != slotWidth
+            params.width = slotWidth
+            params.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT
+            indicator.layoutParams = params
+            val target = if (audioMode) slotWidth.toFloat() else 0f
+            if (firstLayout) {
+                indicator.translationX = target
+            } else {
+                indicator.animate().cancel()
+                indicator.animate()
+                    .translationX(target)
+                    .setDuration(420L)
+                    .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1f, 0.36f, 1f))
+                    .start()
+            }
+        }
+        binding.videoMode.animate().cancel()
+        binding.audioMode.animate().cancel()
+        binding.videoMode.animate().alpha(if (audioMode) 0.68f else 1f).setDuration(220L).start()
+        binding.audioMode.animate().alpha(if (audioMode) 1f else 0.68f).setDuration(220L).start()
         binding.videoMode.setTextColor(
             if (audioMode) ContextCompat.getColor(requireContext(), R.color.dl_muted)
             else Color.WHITE
@@ -1034,7 +1129,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             .start()
     }
 
-    /** Four chips a row, 6dp apart, each carrying its own leading icon. */
+    /** Compact, fully rounded quality capsules arranged responsively in three-item rows. */
     private fun fillQualityRow() {
         runCatching {
         val density = resources.displayMetrics.density
@@ -1042,41 +1137,41 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         val container = binding.qualityContainer
         container.removeAllViews()
 
-        val iconRes = if (audioMode) R.drawable.ic_music_note else R.drawable.ic_movie
-        val icon = ContextCompat.getDrawable(requireContext(), iconRes)
-            ?.mutate()
-            ?.apply { setTint(ContextCompat.getColor(requireContext(), R.color.dl_muted)) }
-
-        formats.chunked(4).forEach { rowFormats ->
+        formats.chunked(3).forEach { rowFormats ->
             val row = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.HORIZONTAL
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                setPadding(0, 0, 0, (6 * density).toInt())
+                setPadding(0, 0, 0, (8 * density).toInt())
             }
             rowFormats.forEach { format ->
-                // inflated, then configured step by step: chaining apply() on the cast
-                // sent the compiler's inference into a loop
                 val chip = LayoutInflater.from(requireContext())
                     .inflate(R.layout.chip_bouncy, row, false) as com.atube.app.ui.views.BouncyChip
-                chip.text = format.label
+                chip.text = qualityLabel(format)
+                chip.tag = format
                 chip.isSelected = format == selectedFormat
-                if (icon != null) {
-                    chip.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
-                    chip.compoundDrawablePadding = (6 * density).toInt()
-                }
-                chip.setOnClickListener {
+                chip.setOnClickListener { clicked ->
                     selectedFormat = format
-                    (it as? com.atube.app.ui.views.BouncyChip)?.isSelected = true
-                    fillQualityRow()
+                    // Keep the existing chip instances alive while the selected
+                    // capsule fluidly moves from the previous quality to this one.
+                    for (rowIndex in 0 until container.childCount) {
+                        val qualityRow = container.getChildAt(rowIndex) as? LinearLayout ?: continue
+                        for (chipIndex in 0 until qualityRow.childCount) {
+                            val qualityChip = qualityRow.getChildAt(chipIndex) as? com.atube.app.ui.views.BouncyChip
+                                ?: continue
+                            qualityChip.isSelected = qualityChip.tag == selectedFormat
+                        }
+                    }
+                    clicked.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                    crossFadeDownloadLabel()
                 }
                 val params = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
-                params.marginEnd = (6 * density).toInt()
+                params.marginEnd = (8 * density).toInt()
                 chip.layoutParams = params
                 row.addView(chip)
             }
@@ -1094,6 +1189,23 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         binding.videoMode.animate().alpha(if (audioMode) 0.55f else 1f).setDuration(160).start()
         binding.audioMode.animate().alpha(if (audioMode) 1f else 0.55f).setDuration(160).start()
         }
+    }
+
+    /** Short, real-source labels keep every quality capsule compact and uncut. */
+    private fun qualityLabel(format: YtDlpResult.Format): String {
+        val raw = format.label
+        val lower = raw.lowercase()
+        if (lower.contains("best")) return "Best"
+        if (format.isAudio) {
+            val bitrate = Regex("(\\d{2,3})\\s*kbps", RegexOption.IGNORE_CASE)
+                .find(raw)?.groupValues?.getOrNull(1)
+                ?: Regex("(\\d{2,3})").find(raw)?.groupValues?.getOrNull(1)
+            return bitrate?.let { "$it kbps" } ?: "Audio"
+        }
+        val height = Regex("(\\d{3,4})p", RegexOption.IGNORE_CASE)
+            .find(raw)?.groupValues?.getOrNull(1)?.toIntOrNull()
+        if (height != null) return if (height >= 2160) "4K" else "${height}p"
+        return raw.substringBefore(" · ").ifBlank { raw }.take(16)
     }
 
     /** The button's label cross-fades instead of swapping in a single frame. */

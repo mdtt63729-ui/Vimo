@@ -13,4 +13,18 @@
     <color name="chip_bg_selected">#F1F1F1</color>
     <color name="chip_text">#F1F1F1</color>
     <color name="chip_text_selected">#0F0F0F</color>
+
+    <!-- Downloader screen palette: accessible Material 3 dark theme -->
+    <color name="dl_page_background">#101923</color>
+    <color name="dl_card">#1B2735</color>
+    <color name="dl_blue">#8BC5FF</color>
+    <color name="dl_blue_dark">#B5D9FF</color>
+    <color name="dl_blue_soft">#25374A</color>
+    <color name="dl_blue_border">#3A4B5F</color>
+    <color name="dl_hint">#94A8BD</color>
+    <color name="dl_ink">#E3F0FF</color>
+    <color name="dl_muted">#B0C4D8</color>
+    <color name="dl_soft">#25374A</color>
+    <color name="dl_line">#3A4B5F</color>
+    <color name="dl_danger">#FFB4AB</color>
 </resources>

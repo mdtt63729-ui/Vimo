@@ -71,8 +71,8 @@ object YtDlpEngine {
                 context.applicationInfo.nativeLibraryDir,
                 dir.absolutePath
             )
-            ffmpegReady = true
-            true
+            ffmpegReady = bridge(context).callAttr("ffmpeg_available").toBoolean()
+            ffmpegReady
         }.getOrDefault(false)
     }
 
@@ -164,7 +164,7 @@ object YtDlpEngine {
                 .toString()
             val json = JSONObject(raw)
             if (!json.optBoolean("ok")) null
-            else json.optString("path").takeIf { it.isNotBlank() } ?: ""
+            else json.optString("path").takeIf { it.isNotBlank() && File(it).isFile && File(it).length() > 0L }
         }.getOrNull()
     }
 
@@ -172,16 +172,17 @@ object YtDlpEngine {
      * Downloads the audio track and converts it to MP3 with the bundled ffmpeg.
      * Blocks until finished, so call it off the main thread.
      */
-    fun startAudioDownload(url: String, outputDir: File, jobId: String, bitrate: String = "192"): Boolean {
-        val context = appContext ?: return false
-        if (!ensureStarted(context)) return false
+    fun startAudioDownload(url: String, outputDir: File, jobId: String, bitrate: String = "192"): String? {
+        val context = appContext ?: return null
+        if (!ensureStarted(context)) return null
         runCatching { outputDir.mkdirs() }
         return runCatching {
             val raw = bridge(context)
                 .callAttr("start_audio_download", url, outputDir.absolutePath, jobId, bitrate)
                 .toString()
-            JSONObject(raw).optBoolean("ok")
-        }.getOrDefault(false)
+            val json = JSONObject(raw)
+            if (json.optBoolean("ok")) json.optString("path").takeIf { it.isNotBlank() && File(it).isFile && File(it).length() > 0L } else null
+        }.getOrNull()
     }
 
     /**

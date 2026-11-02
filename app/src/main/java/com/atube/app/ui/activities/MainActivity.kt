@@ -307,6 +307,13 @@ class MainActivity : AbstractPlayerHostActivity() {
         navController.addOnDestinationChangedListener { _, destination, _ ->
             lastHomeTapAt = 0L
             val isShortsDestination = destination.id == R.id.shortsFragment
+            val isDownloaderDestination = destination.id == R.id.downloadsFragment
+            // The downloader is a focused, edge-to-edge workspace: hide the global
+            // app bar and app navigation bars only for that destination, then restore
+            // them automatically when the user navigates elsewhere.
+            binding.appBarLayout.isVisible = !isDownloaderDestination
+            binding.bottomNav.isVisible = !isDownloaderDestination
+            binding.floatingNav.isVisible = false
             // Reuse Vimo's existing app bar as the compact Shorts header. Search
             // remains the existing toolbar action; Cast is omitted because this
             // project has no supported Cast integration.

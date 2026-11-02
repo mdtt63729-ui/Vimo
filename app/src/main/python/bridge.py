@@ -245,9 +245,25 @@ def start_download(url, format_selector, output_dir, job_id, headers_json=""):
     selector = (format_selector or "").strip() or "bv*+ba/b"
     if selector == "direct":
         import re as _re
-        ext = os.path.splitext(url.split("?")[0])[1] or ".mp4"
-        name = _re.sub(r"[^A-Za-z0-9._ -]", "_", (url.rstrip("/").rsplit("/", 1)[-1] or "media"))[:80]
-        return download_direct(url, os.path.join(output_dir, name + ext), job_id, headers_json)
+        from urllib.parse import urlparse, unquote
+        parsed_path = urlparse(url).path
+        ext = os.path.splitext(parsed_path)[1].lower()
+        name = unquote(os.path.basename(parsed_path) or "media")
+        if not ext or len(ext) > 8:
+            # Some image hosts expose extensionless CDN URLs; infer the real type.
+            try:
+                import urllib.request as _urlrequest
+                req = _urlrequest.Request(url, method="HEAD", headers={"User-Agent": "Mozilla/5.0"})
+                with _urlrequest.urlopen(req, timeout=10) as response:
+                    mime = (response.headers.get("Content-Type") or "").split(";", 1)[0].lower()
+                ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif", "image/bmp": ".bmp", "image/avif": ".avif", "image/heic": ".heic", "image/tiff": ".tiff", "image/svg+xml": ".svg"}.get(mime, ".bin")
+            except Exception:
+                ext = ".bin"
+        name = _re.sub(r"[^A-Za-z0-9._ -]", "_", name)[:100]
+        # Keep a valid existing extension exactly once (especially .jpg/.png/.webp).
+        if os.path.splitext(name)[1].lower() != ext:
+            name += ext
+        return download_direct(url, os.path.join(output_dir, name), job_id, headers_json)
     opts = {
         "quiet": True,
         "no_warnings": True,
@@ -289,10 +305,14 @@ def start_download(url, format_selector, output_dir, job_id, headers_json=""):
             # file, which then failed to play and never showed up correctly.
             produced = None
             try:
-                requested = info.get("requested_downloads") or []
-                if requested:
-                    produced = requested[0].get("filepath")
-                produced = produced or info.get("filepath") or info.get("_filename")
+                # After yt-dlp merges adaptive video+audio, info["filepath"] is
+                # the final muxed file. requested_downloads can still point at an
+                # intermediate video-only/audio-only component, so prefer filepath.
+                produced = info.get("filepath") or info.get("_filename")
+                if not produced:
+                    requested = info.get("requested_downloads") or []
+                    if requested:
+                        produced = requested[0].get("filepath")
             except Exception:
                 produced = None
             return json.dumps({"ok": True, "path": produced})
@@ -339,18 +359,35 @@ def start_audio_download(url, output_dir, job_id, bitrate="192"):
     _write_progress(job_id, {"status": "starting", "percent": 0, "message": "Preparing audio"})
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
-            code = ydl.download([url])
+            info = ydl.extract_info(url, download=True)
         if job_id in _cancelled:
             _write_progress(job_id, {"status": "cancelled", "message": "Cancelled"})
             return json.dumps({"ok": False, "error": "Cancelled"})
-        if code == 0:
+        if info:
             _write_progress(job_id, {
                 "status": "finished",
                 "percent": 100,
-                "message": "Download complete",
+                "message": "Audio conversion complete",
                 "files": sorted(os.listdir(output_dir)),
             })
-            return json.dumps({"ok": True})
+            # yt-dlp's postprocessor updates filepath to the final MP3. Never
+            # return an intermediate m4a/webm file as the completed conversion.
+            produced = info.get("filepath") or info.get("_filename")
+            if not produced:
+                requested = info.get("requested_downloads") or []
+                if requested:
+                    produced = requested[0].get("filepath")
+            if produced and os.path.exists(produced) and produced.lower().endswith(".mp3"):
+                return json.dumps({"ok": True, "path": produced})
+            # Some extractors return the pre-postprocessor path; locate the MP3
+            # generated for this job by matching the video id, not arbitrary newest.
+            video_id = str(info.get("id") or "")
+            candidates = [os.path.join(output_dir, name) for name in os.listdir(output_dir)
+                          if name.lower().endswith(".mp3") and video_id and video_id in name]
+            if candidates:
+                return json.dumps({"ok": True, "path": max(candidates, key=os.path.getmtime)})
+            _write_progress(job_id, {"status": "error", "message": "The MP3 output file was not found"})
+            return json.dumps({"ok": False, "error": "The MP3 output file was not found."})
         _write_progress(job_id, {"status": "error", "message": "The conversion did not complete"})
         return json.dumps({"ok": False, "error": "The conversion did not complete."})
     except Exception as e:

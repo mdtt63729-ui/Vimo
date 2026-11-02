@@ -4,6 +4,10 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
+import android.content.res.ColorStateList
+import android.animation.ValueAnimator
+import android.view.animation.PathInterpolator
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.MotionEvent
@@ -27,11 +31,11 @@ class BouncyChip @JvmOverloads constructor(
     attrs: AttributeSet? = null
 ) : TextView(context, attrs) {
 
-    private var selectedColor: Int = Color.DKGRAY
+    private var selectedColor: Int = Color.rgb(40, 118, 189)
     private var onSelectedColor: Int = Color.WHITE
-    private var unselectedColor: Int = Color.LTGRAY
-    private var outlineColor: Int = Color.GRAY
-    private var normalTextColor: Int = Color.BLACK
+    private var unselectedColor: Int = Color.WHITE
+    private var outlineColor: Int = Color.rgb(201, 221, 240)
+    private var normalTextColor: Int = Color.rgb(54, 92, 127)
 
     private var density: Float = 2f
     private var backgroundShape: GradientDrawable? = null
@@ -50,9 +54,21 @@ class BouncyChip @JvmOverloads constructor(
             // painted straight away with plain colours; theme attributes are not read
             // here, which is what used to crash, and the chip is never invisible
             density = resources.displayMetrics.density
-            setBackgroundResource(
-                if (isSelected) com.atube.app.R.drawable.bg_capsule_selected
-                else com.atube.app.R.drawable.bg_capsule
+            backgroundShape = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 999f * density
+                setColor(if (isSelected) selectedColor else unselectedColor)
+                setStroke((1 * density).toInt().coerceAtLeast(1), outlineColor)
+            }
+            background = backgroundShape
+            foreground = RippleDrawable(
+                ColorStateList.valueOf(0x5576BFFF),
+                null,
+                GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 999f * density
+                    setColor(Color.WHITE)
+                }
             )
             setPadding(
                 (16 * density).toInt(), (9 * density).toInt(),
@@ -79,11 +95,14 @@ class BouncyChip @JvmOverloads constructor(
             if (theme.resolveAttribute(attr, value, true)) value.data else fallback
         }.getOrDefault(fallback)
 
-        selectedColor = resolve(android.R.attr.colorPrimary, Color.DKGRAY)
+        // The downloader keeps its own light-blue Material 3 palette regardless
+        // of the app-wide theme variant selected elsewhere in settings.
+        selectedColor = Color.rgb(40, 118, 189)
         onSelectedColor = Color.WHITE
-        unselectedColor = resolve(android.R.attr.colorBackground, Color.LTGRAY)
-        outlineColor = resolve(android.R.attr.textColorSecondary, Color.GRAY)
-        normalTextColor = resolve(android.R.attr.textColorPrimary, Color.BLACK)
+        unselectedColor = Color.WHITE
+        outlineColor = Color.rgb(201, 221, 240)
+        normalTextColor = Color.rgb(54, 92, 127)
+        backgroundShape?.setStroke((1 * density).toInt().coerceAtLeast(1), outlineColor)
 
 
         scaleSpring = SpringAnimation(FloatValueHolder(1f)).apply {
@@ -114,17 +133,19 @@ class BouncyChip @JvmOverloads constructor(
         super.setSelected(selected)
         // the capsule flips immediately, whatever state the springs are in; before this
         // a chip whose springs were not built yet looked like it had not been tapped
-        setBackgroundResource(
-            if (selected) com.atube.app.R.drawable.bg_capsule_selected
-            else com.atube.app.R.drawable.bg_capsule
-        )
-        setTextColor(if (selected) Color.WHITE else normalTextColor)
-        if (!ready) return
+        if (!ready) {
+            backgroundShape?.setColor(if (selected) selectedColor else unselectedColor)
+            setTextColor(if (selected) onSelectedColor else normalTextColor)
+            setTypeface(typeface, if (selected) Typeface.BOLD else Typeface.NORMAL)
+            return
+        }
         runCatching {
+            animateCapsuleColor(if (selected) selectedColor else unselectedColor)
             colourSpring?.animateToFinalPosition(if (selected) 1f else 0f)
             iconSpring?.animateToFinalPosition(if (selected) 1f else 0.8f)
             setTypeface(typeface, if (selected) Typeface.BOLD else Typeface.NORMAL)
-            if (!selected) spring(1f, 0.62f, STIFFNESS_MEDIUM_LOW)
+            if (!selected) spring(1f, 0.72f, STIFFNESS_MEDIUM_LOW)
+            else spring(1.025f, 0.78f, STIFFNESS_MEDIUM_LOW)
         }
     }
 
@@ -163,6 +184,20 @@ class BouncyChip @JvmOverloads constructor(
         animation.spring.dampingRatio = damping
         animation.spring.stiffness = stiffness
         animation.animateToFinalPosition(target)
+    }
+
+    private fun animateCapsuleColor(targetColor: Int) {
+        val shape = backgroundShape ?: return
+        val startColor = runCatching { shape.color?.defaultColor ?: unselectedColor }
+            .getOrDefault(unselectedColor)
+        ValueAnimator.ofArgb(startColor, targetColor).apply {
+            duration = 300L
+            interpolator = PathInterpolator(0.22f, 1f, 0.36f, 1f)
+            addUpdateListener { animator ->
+                runCatching { shape.setColor(animator.animatedValue as Int) }
+            }
+            start()
+        }
     }
 
     private fun paint(fraction: Float) {
