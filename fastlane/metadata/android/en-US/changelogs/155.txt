@@ -1,0 +1,4 @@
+Vimo 33.82
+
+- Downloads no longer stop at "did not finish": when yt-dlp is refused, the file is
+  fetched through the same on-device InnerTube resolver the player already uses.

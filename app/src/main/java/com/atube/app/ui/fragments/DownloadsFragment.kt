@@ -600,12 +600,36 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
                     val viaEngine = YtDlpEngine.startDownload(
                         format.pageUrl, format.formatId, directory.toFile(), jobId
                     )
-                    // Keep format selection authoritative. A direct-URL fallback here
-                    // silently downloads a video-only adaptive stream without its audio.
-                    // yt-dlp must handle the selected format so it can fetch the matching
-                    // audio stream and mux both tracks with FFmpeg. If that fails, report
-                    // the failure instead of saving a misleading silent video.
-                    viaEngine
+                    // yt-dlp can be refused on a mobile network even though it
+                    // extracted fine. The player already falls back to the on-device
+                    // InnerTube resolver for exactly this reason, so the download uses
+                    // the same route: resolve the video again and fetch the stream it
+                    // hands back, with the headers that URL needs.
+                    viaEngine ?: run {
+                        val videoId = format.pageUrl.toID()
+                        val streams = if (videoId.isBlank()) null
+                        else com.atube.app.api.muso.MusoStreamResolver.resolve(videoId)
+
+                        val stream = if (format.isAudio) {
+                            streams?.audioStreams?.maxByOrNull { it.bitrate ?: 0 }
+                        } else {
+                            streams?.videoStreams?.maxByOrNull { it.height ?: 0 }
+                        }
+                        val url = stream?.url
+                        if (url.isNullOrBlank()) {
+                            null
+                        } else {
+                            val headers = com.atube.app.api.muso.MusoStreamResolver
+                                .headersFor(url)
+                                .let { map ->
+                                    if (map.isEmpty()) ""
+                                    else org.json.JSONObject(map as Map<*, *>).toString()
+                                }
+                            YtDlpEngine.startDownload(
+                                url, "direct", directory.toFile(), jobId, headers
+                            )
+                        }
+                    }
                 }
             }
             poller.cancel()
