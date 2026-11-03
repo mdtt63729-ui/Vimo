@@ -1,0 +1,4 @@
+Vimo 33.87
+
+- Each category paginates on its own: a page loading for one category no longer blocks
+  another, and the same category cannot start a second page while one is running.

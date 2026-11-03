@@ -81,6 +81,9 @@ class HomeViewModel : ViewModel() {
 
     private var loadMoreJob: Job? = null
 
+    /** Categories that currently have a page request in flight. */
+    private val paginating = mutableSetOf<String>()
+
     // Recommendation engine coordinator
     private val homeFeedCoordinator = HomeFeedCoordinator()
 
@@ -196,13 +199,17 @@ class HomeViewModel : ViewModel() {
     fun loadMoreRecommendations(context: Context) {
         val currentState = feedState.value
         if (currentState?.isLoadingMore == true || currentState?.hasMore == false) return
-        if (loadMoreJob?.isActive == true) return
+
+        // One job per category. A page being fetched for Gaming must not block All, and
+        // the same category must not be able to start a second page while one runs.
+        val category = selectedCategory.value ?: "All"
+        if (!paginating.add(category)) return
 
         // Update state to show loading
         feedState.value = currentState?.copy(isLoadingMore = true)
 
         val region = PreferenceHelper.getTrendingRegion(context)
-        loadMoreJob = viewModelScope.launch {
+        val job = viewModelScope.launch {
             try {
                 val state = homeFeedCoordinator.loadMore(region)
                 if (state != null) {
@@ -217,6 +224,13 @@ class HomeViewModel : ViewModel() {
                             isLoadingMore = false
                         )
                     )
+                    // the cached category learns that it has more (or has run out)
+                    categoryCache[category]?.let { cached ->
+                        categoryCache[category] = cached.copy(
+                            items = state.items.ifEmpty { cached.items },
+                            hasMore = state.hasMore
+                        )
+                    }
                 } else {
                     feedState.postValue(currentState?.copy(isLoadingMore = false, hasMore = false))
                 }
@@ -224,6 +238,7 @@ class HomeViewModel : ViewModel() {
                 feedState.postValue(currentState?.copy(isLoadingMore = false))
             }
         }
+        job.invokeOnCompletion { paginating.remove(category) }
     }
 
     /**
