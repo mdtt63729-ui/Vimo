@@ -66,7 +66,18 @@ class HomeViewModel : ViewModel() {
      * What each chip already loaded, so going All -> Explore -> All puts the old
      * list straight back instead of fetching it again and flashing the skeletons.
      */
-    private val categoryCache = mutableMapOf<String, List<HomeFeedItem>>()
+    /**
+     * What a category remembers while the app is running: its videos, whether more can
+     * be fetched, and where the user had scrolled to. Keeping all three is what makes a
+     * switch back instant instead of a reload.
+     */
+    data class CategoryFeedState(
+        val items: List<HomeFeedItem>,
+        val hasMore: Boolean = true,
+        var scrollPosition: Int = 0
+    )
+
+    private val categoryCache = mutableMapOf<String, CategoryFeedState>()
 
     private var loadMoreJob: Job? = null
 
@@ -219,18 +230,28 @@ class HomeViewModel : ViewModel() {
      * Load recommendations for a specific category.
      * Does NOT recreate the fragment — just re-ranks.
      */
+    /** Called as the user scrolls, so the position survives a category switch. */
+    fun rememberScrollPosition(category: String, position: Int) {
+        val state = categoryCache[category] ?: return
+        state.scrollPosition = position
+    }
+
+    /** Where this category was left, or 0 when it has never been scrolled. */
+    fun scrollPositionOf(category: String): Int =
+        categoryCache[category]?.scrollPosition ?: 0
+
     fun loadCategory(context: Context, category: String) {
         selectedCategory.value = category
 
         // Already loaded once: restore it and stop. Nothing is fetched and the
         // thumbnails come back from Coil's cache, so the switch is instant.
         val remembered = categoryCache[category]
-        if (remembered != null && remembered.isNotEmpty()) {
+        if (remembered != null && remembered.items.isNotEmpty()) {
             recFeedJob?.cancel()
             feedState.value = HomeFeedState(
-                items = remembered,
+                items = remembered.items,
                 status = HomeUiStatus.SUCCESS,
-                hasMore = true,
+                hasMore = remembered.hasMore,
                 selectedCategory = category
             )
             return
@@ -264,7 +285,12 @@ class HomeViewModel : ViewModel() {
                 // Stale request protection: only update if this category is still selected
                 if (selectedCategory.value != category) return@launch
                 if (state.items.isNotEmpty()) {
-                    categoryCache[category] = state.items
+                    val existing = categoryCache[category]
+                    categoryCache[category] = CategoryFeedState(
+                        items = state.items,
+                        hasMore = state.hasMore,
+                        scrollPosition = existing?.scrollPosition ?: 0
+                    )
                     feedState.postValue(state.copy(status = HomeUiStatus.SUCCESS))
                 } else {
                     feedState.postValue(state.copy(status = HomeUiStatus.EMPTY))

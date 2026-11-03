@@ -54,6 +54,13 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     )
 
     private val categoryChipsAdapter = com.atube.app.ui.adapters.CategoryChipsAdapter(HomeViewModel.CATEGORIES) { category ->
+        // where the user was in the category being left, kept for when they come back
+        (binding.homeFeedRV.layoutManager as? LinearLayoutManager)?.let { lm ->
+            homeViewModel.rememberScrollPosition(
+                homeViewModel.selectedCategory.value ?: "All",
+                lm.findFirstVisibleItemPosition()
+            )
+        }
         homeViewModel.loadCategory(requireContext(), category)
     }
 
@@ -160,6 +167,17 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
      * It lives in a method rather than inline: the adapter is built with this lambda,
      * so referring to the adapter inside it is a forward reference.
      */
+    /** Puts the list back where this category was scrolled to. */
+    private fun restoreScrollFor(category: String) {
+        val position = homeViewModel.scrollPositionOf(category)
+        if (position <= 0) return
+        val recycler = binding.homeFeedRV
+        recycler.post {
+            (recycler.layoutManager as? LinearLayoutManager)
+                ?.scrollToPositionWithOffset(position, 0)
+        }
+    }
+
     private fun removeFromFeed(videoId: String) {
         homeViewModel.recordDismissal(videoId)
         val current: List<com.atube.app.recommendation.models.HomeFeedItem> =
@@ -266,6 +284,9 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private fun showFeed(state: HomeFeedState) {
         categoryChipsAdapter.setSelectedCategory(state.selectedCategory)
+
+        // a category coming back from cache resumes where it was left, without a flash
+        state.selectedCategory?.let { restoreScrollFor(it) }
         // the indicator belongs to the refresh gesture only
         showRefreshIndicator(state.status == HomeUiStatus.LOADING && state.isRefreshing)
 

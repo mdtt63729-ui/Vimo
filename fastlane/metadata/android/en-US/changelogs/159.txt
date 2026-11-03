@@ -1,0 +1,5 @@
+Vimo 33.86
+
+- A category now remembers its whole state, not just its videos: the list, whether more
+  can be fetched, and where you had scrolled. Switching back resumes in place instead of
+  reloading from the top.
