@@ -1,0 +1,5 @@
+Vimo 33.92
+
+- Returning to a category you already loaded no longer shows the skeleton.
+- The header fades and slides away as you scroll down and comes back as you scroll up.
+- Category chips give a small lift when the selection moves to them.

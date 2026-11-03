@@ -99,7 +99,20 @@ class CategoryChipsAdapter(
         }
 
         fun updateSelection(isSelected: Boolean) {
-            (binding.root as Chip).isChecked = isSelected
+            val chip = binding.root as Chip
+            chip.isChecked = isSelected
+            // the chip that takes the selection lifts slightly and settles back, so the
+            // move reads as a shift rather than a colour swap
+            if (isSelected) {
+                chip.animate().cancel()
+                chip.scaleX = 0.94f
+                chip.scaleY = 0.94f
+                chip.animate()
+                    .scaleX(1f).scaleY(1f)
+                    .setDuration(220)
+                    .setInterpolator(android.view.animation.OvershootInterpolator(1.6f))
+                    .start()
+            }
         }
     }
 

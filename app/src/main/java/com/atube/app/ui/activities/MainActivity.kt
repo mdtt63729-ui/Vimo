@@ -161,6 +161,43 @@ class MainActivity : AbstractPlayerHostActivity() {
         }
     }
 
+    private var headerHidden = false
+    private var headerAccum = 0
+
+    /**
+     * The home feed drives the header: scrolling down fades it out and slides it away,
+     * scrolling up brings it back. Small movements do not trigger it, so the bar does not
+     * flicker while the finger is still deciding.
+     */
+    fun handleFeedScroll(dy: Int) {
+        if (binding.appBarLayout.isVisible.not() && !headerHidden) return
+        headerAccum += dy
+        if (headerHidden) {
+            if (headerAccum < -12) {
+                headerHidden = false
+                headerAccum = 0
+                binding.appBarLayout.animate()
+                    .translationY(0f).alpha(1f)
+                    .setDuration(220)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .start()
+            }
+            return
+        }
+        if (headerAccum > 12) {
+            headerHidden = true
+            headerAccum = 0
+            binding.appBarLayout.animate()
+                .translationY(-binding.appBarLayout.height.toFloat()).alpha(0f)
+                .setDuration(240)
+                .setInterpolator(android.view.animation.AccelerateInterpolator())
+                .withEndAction { if (headerHidden) binding.appBarLayout.translationY = 0f }
+                .start()
+        } else if (headerAccum < -12) {
+            headerAccum = 0
+        }
+    }
+
     private fun setUpTelegramGate() {
         if (PreferenceHelper.getBoolean(PREF_TELEGRAM_JOINED, false)) return
 

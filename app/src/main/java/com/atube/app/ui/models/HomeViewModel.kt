@@ -128,14 +128,22 @@ class HomeViewModel : ViewModel() {
     fun loadRecommendationFeed(context: Context, forceRefresh: Boolean = false) {
         val region = PreferenceHelper.getTrendingRegion(context)
 
-        // Show cached feed immediately if available
-        val cached = homeFeedCoordinator.getCachedFeed()
+        // Show cached feed immediately if available. The per-category cache is checked
+        // first: coming back to a category that was already loaded must never fall
+        // through to the skeleton just because the coordinator's own cache is empty.
+        val currentCategory = selectedCategory.value ?: "All"
+        val remembered = categoryCache[currentCategory]
+        val cached = if (remembered != null && remembered.items.isNotEmpty()) {
+            remembered.items
+        } else {
+            homeFeedCoordinator.getCachedFeed()
+        }
         if (cached != null && !forceRefresh) {
             feedState.value = HomeFeedState(
                 items = cached,
                 status = HomeUiStatus.SUCCESS,
-                hasMore = true,
-                selectedCategory = selectedCategory.value ?: "All"
+                hasMore = remembered?.hasMore ?: true,
+                selectedCategory = currentCategory
             )
         } else {
             // Emit explicit LOADING state with skeleton items — NOT empty
