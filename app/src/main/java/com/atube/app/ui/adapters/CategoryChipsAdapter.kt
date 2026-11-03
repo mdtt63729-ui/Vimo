@@ -75,13 +75,19 @@ class CategoryChipsAdapter(
 
         init {
             binding.root.setOnClickListener {
-                val oldPos = selectedPosition
-                selectedPosition = bindingAdapterPosition
-                if (oldPos != selectedPosition) {
-                    notifyItemChanged(oldPos, PAYLOAD_SELECTION)
-                    notifyItemChanged(selectedPosition, PAYLOAD_SELECTION)
-                    onCategorySelected(categories[selectedPosition])
+                val pos = bindingAdapterPosition
+                if (pos == RecyclerView.NO_POSITION) return@setOnClickListener
+                // Tapping the category that is already selected keeps it selected and
+                // does nothing else; before this the chip simply un-checked itself.
+                if (pos == selectedPosition) {
+                    updateSelection(true)
+                    return@setOnClickListener
                 }
+                val oldPos = selectedPosition
+                selectedPosition = pos
+                notifyItemChanged(oldPos, PAYLOAD_SELECTION)
+                notifyItemChanged(pos, PAYLOAD_SELECTION)
+                onCategorySelected(categories[pos])
             }
         }
 

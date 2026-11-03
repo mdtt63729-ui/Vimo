@@ -12,4 +12,11 @@
     <color name="dl_soft">#253653</color>
     <color name="dl_line">#344761</color>
     <color name="dl_danger">#FFB4AB</color>
+
+    <!-- Category chips on a dark screen: a quiet raised surface when idle, a bright
+         filled pill when selected, instead of the light grey used in light mode. -->
+    <color name="chip_bg">#1C1C1F</color>
+    <color name="chip_bg_selected">#F1F1F3</color>
+    <color name="chip_text">#E6E6EA</color>
+    <color name="chip_text_selected">#0B0B0C</color>
 </resources>

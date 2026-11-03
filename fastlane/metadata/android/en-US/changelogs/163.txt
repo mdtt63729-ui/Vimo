@@ -1,0 +1,4 @@
+Vimo 33.90
+
+- Category chips get a proper dark palette instead of light grey blocks, and tapping the
+  category that is already selected no longer un-selects it.
