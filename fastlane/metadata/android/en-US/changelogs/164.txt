@@ -1,0 +1,4 @@
+Vimo 33.91
+
+- The loading skeleton is no longer a white slab on black: dark mode gets its own quiet
+  placeholder colours.
