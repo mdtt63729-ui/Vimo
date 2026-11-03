@@ -1,0 +1,6 @@
+Vimo 33.89
+
+- A real Vimo folder at /storage/emulated/0/Vimo, created when the app opens, with
+  "downloader" for link downloads and "yt-downloader" for the rest. The onboarding asks
+  for the All files access this needs. Deleting a download in the app removes the file
+  from that folder too, and the files survive an uninstall.

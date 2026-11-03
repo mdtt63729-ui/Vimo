@@ -15,6 +15,10 @@ import com.atube.app.ui.effects.GlobalTouchEffects
 
 class ATubeApp : Application() {
     override fun onCreate() {
+        // The Vimo folder is created as soon as the app opens, so the very first download
+        // already has somewhere to go.
+        com.atube.app.helpers.DownloadHelper.ensureVimoFolder()
+
         super.onCreate()
         instance = this
 

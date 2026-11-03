@@ -52,6 +52,33 @@ object DownloadHelper {
      * cannot be written - scoped storage on a newer Android - it falls back to the app's
      * own external folder so a download never fails for want of a directory.
      */
+    /**
+     * Creates /storage/emulated/0/Vimo with its two subfolders and returns true when the
+     * public folder is really writable. Everything the app saves lives there, so the
+     * files survive an uninstall; deleting from inside the app removes them from here too.
+     */
+    fun ensureVimoFolder(): Boolean {
+        val root = runCatching {
+            android.os.Environment.getExternalStorageDirectory().resolve("Vimo")
+        }.getOrNull() ?: return false
+
+        return runCatching {
+            root.mkdirs()
+            root.resolve(DOWNLOADER_DIR).mkdirs()
+            root.resolve(VIDEO_DIR).mkdirs()
+            root.isDirectory && root.canWrite()
+        }.getOrDefault(false)
+    }
+
+    /** Deletes a downloaded file from the phone's storage, if it is still there. */
+    fun deleteFile(path: String?): Boolean {
+        if (path.isNullOrBlank()) return false
+        return runCatching {
+            val file = java.io.File(path)
+            file.exists() && file.delete()
+        }.getOrDefault(false)
+    }
+
     fun getDownloadDir(context: Context, path: String): Path {
         val publicRoot = runCatching {
             android.os.Environment

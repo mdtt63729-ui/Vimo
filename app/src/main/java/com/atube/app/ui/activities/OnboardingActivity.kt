@@ -34,6 +34,7 @@ class OnboardingActivity : BaseActivity() {
     private var firstResume = true
     private var permissionFlowInProgress = false
     private var continueToInstallSettingsAfterRuntime = false
+    private var lastFolderGranted = false
     private var lastStorageGranted = false
     private var lastInstallGranted = false
     private var lastNotificationsGranted = false
@@ -86,6 +87,7 @@ class OnboardingActivity : BaseActivity() {
     private fun setupInteractions() {
         // Each row is independently actionable and uses the platform selectable ripple.
         binding.storageRow.setOnClickListener { requestStoragePermission() }
+        binding.folderRow.setOnClickListener { requestFolderPermission() }
         binding.installRow.setOnClickListener { requestInstallPermission() }
         binding.notificationRow.setOnClickListener { requestNotificationPermission() }
 
@@ -225,6 +227,41 @@ class OnboardingActivity : BaseActivity() {
         getPreferences(MODE_PRIVATE).edit().putBoolean("asked_$permission", true).apply()
     }
 
+    /**
+     * Asks for All files access, which is what lets Vimo write a real folder at
+     * /storage/emulated/0/Vimo. The folder is created the moment access is granted, so
+     * the user sees it appear rather than being told it will.
+     */
+    private fun requestFolderPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            // Below Android 11 plain storage permission is enough.
+            requestStoragePermission()
+            return
+        }
+        if (android.os.Environment.isExternalStorageManager()) {
+            com.atube.app.helpers.DownloadHelper.ensureVimoFolder()
+            refreshPermissionStates(animateChanges = true)
+            return
+        }
+        runCatching {
+            startActivity(
+                android.content.Intent(
+                    android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                    android.net.Uri.parse("package:$packageName")
+                )
+            )
+        }.onFailure {
+            startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+        }
+    }
+
+    /** True when the Vimo folder can actually be written. */
+    private fun folderReady(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+            android.os.Environment.isExternalStorageManager() &&
+                com.atube.app.helpers.DownloadHelper.ensureVimoFolder()
+        else true
+
     private fun refreshPermissionStates(animateChanges: Boolean) {
         // Vimo writes its own Downloads through MediaStore on Android 10+.
         val storageGranted = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
@@ -236,6 +273,10 @@ class OnboardingActivity : BaseActivity() {
         updateCheck(binding.storageStatus, storageGranted, animateChanges && !lastStorageGranted)
         updateCheck(binding.installStatus, installGranted, animateChanges && !lastInstallGranted)
         updateCheck(binding.notificationStatus, notificationsGranted, animateChanges && !lastNotificationsGranted)
+
+        val folderGranted = folderReady()
+        updateCheck(binding.folderStatus, folderGranted, animateChanges && !lastFolderGranted)
+        lastFolderGranted = folderGranted
 
         lastStorageGranted = storageGranted
         lastInstallGranted = installGranted
