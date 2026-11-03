@@ -486,7 +486,6 @@ class HomeViewModel : ViewModel() {
         loadMoreJob?.cancel()
         categoryCache.clear()
         paginating.clear()
-        isLoadingMore = false
     }
 
     override fun onCleared() {
