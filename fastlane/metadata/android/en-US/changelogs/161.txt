@@ -1,0 +1,4 @@
+Vimo 33.88
+
+- The feed cache is a session thing and now cleans itself up when the session ends.
+  Downloads, playlists, watch history and settings are untouched.

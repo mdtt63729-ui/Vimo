@@ -474,4 +474,23 @@ class HomeViewModel : ViewModel() {
         is com.atube.app.recommendation.models.HomeFeedItem.Loading -> "loading"
         is com.atube.app.recommendation.models.HomeFeedItem.AllCaughtUp -> "all_caught_up"
     }
+
+    /**
+     * The feed cache is a session thing: it lives in memory, it is never written to
+     * disk, and it goes when the session does. Clearing it here means a new session
+     * starts clean - and because nothing permanent is touched, downloads, playlists,
+     * watch history and settings are unaffected.
+     */
+    fun clearSessionCache() {
+        recFeedJob?.cancel()
+        loadMoreJob?.cancel()
+        categoryCache.clear()
+        paginating.clear()
+        isLoadingMore = false
+    }
+
+    override fun onCleared() {
+        clearSessionCache()
+        super.onCleared()
+    }
 }
