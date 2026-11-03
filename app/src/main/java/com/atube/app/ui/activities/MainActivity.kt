@@ -220,6 +220,7 @@ class MainActivity : AbstractPlayerHostActivity() {
         if (!PreferenceHelper.getBoolean(OnboardingActivity.PREF_ONBOARDED, false)) {
             startActivity(Intent(this, OnboardingActivity::class.java))
             finish()
+            overridePendingTransition(R.anim.onboarding_enter, R.anim.onboarding_home_exit)
             return
         }
 

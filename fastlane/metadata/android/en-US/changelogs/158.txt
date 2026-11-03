@@ -1,0 +1,4 @@
+Vimo 33.85
+
+- Global ripple and fluid touch effects across the app, the onboarding rebuilt with the
+  new animations, and the download page and update dialog refreshed.

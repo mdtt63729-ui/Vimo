@@ -713,4 +713,13 @@
     <string name="update_channel">App updates</string>
     <string name="update_version">Version %1$s</string>
     <string name="onb_perm_install">Install app updates</string>
+
+    <string name="update_pause">Pause</string>
+    <string name="update_resume">Resume</string>
+    <string name="update_exit">Exit</string>
+    <string name="update_install">Install update</string>
+    <string name="update_percent">%1$d%% downloaded</string>
+    <string name="update_preparing">Preparing download…</string>
+    <string name="update_exit_title">Exit update?</string>
+    <string name="update_exit_message">The download will pause. You can resume it later without downloading the completed part again.</string>
 </resources>

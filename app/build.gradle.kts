@@ -40,8 +40,8 @@ android {
         applicationId = "aos.vimo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 157
-        versionName = "33.84"
+        versionCode = 158
+        versionName = "33.85"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resValue("string", "app_name", "Vimo")
 

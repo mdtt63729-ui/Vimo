@@ -1,30 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="splash_screen_icon_color">#ccc</color>
-
-    <!-- Skeleton placeholders, dark mode: the same soft greys YouTube uses -->
-    <color name="skeleton_background">#272727</color>
-    <color name="skeleton_bg">#272727</color>
-    <color name="skeleton_highlight">#333333</color>
-
-    <!-- Category chips, dark mode: dark pill, light when selected -->
-    <color name="chip_background">#272727</color>
-    <color name="chip_bg">#272727</color>
-    <color name="chip_bg_selected">#F1F1F1</color>
-    <color name="chip_text">#F1F1F1</color>
-    <color name="chip_text_selected">#0F0F0F</color>
-
-    <!-- Downloader screen palette: accessible Material 3 dark theme -->
-    <color name="dl_page_background">#101923</color>
-    <color name="dl_card">#1B2735</color>
-    <color name="dl_blue">#8BC5FF</color>
-    <color name="dl_blue_dark">#B5D9FF</color>
-    <color name="dl_blue_soft">#25374A</color>
-    <color name="dl_blue_border">#3A4B5F</color>
-    <color name="dl_hint">#94A8BD</color>
-    <color name="dl_ink">#E3F0FF</color>
-    <color name="dl_muted">#B0C4D8</color>
-    <color name="dl_soft">#25374A</color>
-    <color name="dl_line">#3A4B5F</color>
+    <color name="dl_page_background">#101722</color>
+    <color name="dl_card">#1A2432</color>
+    <color name="dl_blue">#2563EB</color>
+    <color name="dl_blue_dark">#1746B5</color>
+    <color name="dl_blue_soft">#253653</color>
+    <color name="dl_blue_border">#344761</color>
+    <color name="dl_hint">#8493A8</color>
+    <color name="dl_ink">#E8EEF8</color>
+    <color name="dl_muted">#A5B2C5</color>
+    <color name="dl_soft">#253653</color>
+    <color name="dl_line">#344761</color>
     <color name="dl_danger">#FFB4AB</color>
 </resources>

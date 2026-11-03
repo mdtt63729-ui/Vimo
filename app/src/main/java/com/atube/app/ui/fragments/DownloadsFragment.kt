@@ -147,6 +147,17 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         _binding = FragmentDownloadsBinding.bind(view)
         super.onViewCreated(view, savedInstanceState)
 
+        // Keep the final action clear of gesture/navigation bars on edge-to-edge devices.
+        val scroll = view.findViewById<androidx.core.widget.NestedScrollView>(R.id.downloadScroll)
+        val initialBottom = scroll.paddingBottom
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(scroll) { target, insets ->
+            val bottomInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars()).bottom
+            target.setPadding(target.paddingLeft, target.paddingTop, target.paddingRight,
+                initialBottom + bottomInset)
+            insets
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(scroll)
+
         adapter = YtDlpFetchAdapter(
             onVideoClick = { video -> if (video.url.isNotBlank()) fetchLink(video.url) },
             onFormatDownload = { format -> startDownload(format) }
@@ -1086,59 +1097,52 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
 
     private fun renderMode() {
         val density = resources.displayMetrics.density
-        // real Material icons beside each label, tinted to match the capsule
-        val densityForIcons = resources.displayMetrics.density
-        val movieIcon = androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.ic_movie)
-            ?.mutate()
-        val musicIcon = androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.ic_music_note)
-            ?.mutate()
+        val movieIcon = androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.ic_movie)?.mutate()
+        val musicIcon = androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.ic_music_note)?.mutate()
         val onSelected = android.graphics.Color.WHITE
         val onNormal = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.dl_muted)
+
+        // Only the active capsule carries a label. The inactive capsule stays icon-only.
+        binding.videoMode.text = if (audioMode) "" else getString(R.string.dl_mode_video)
+        binding.audioMode.text = if (audioMode) getString(R.string.dl_mode_audio) else ""
         movieIcon?.setTint(if (audioMode) onNormal else onSelected)
         musicIcon?.setTint(if (audioMode) onSelected else onNormal)
         binding.videoMode.setCompoundDrawablesRelativeWithIntrinsicBounds(movieIcon, null, null, null)
-        binding.videoMode.compoundDrawablePadding = (7 * densityForIcons).toInt()
         binding.audioMode.setCompoundDrawablesRelativeWithIntrinsicBounds(musicIcon, null, null, null)
-        binding.audioMode.compoundDrawablePadding = (7 * densityForIcons).toInt()
+        binding.videoMode.compoundDrawablePadding = (8 * density).toInt()
+        binding.audioMode.compoundDrawablePadding = (8 * density).toInt()
+        binding.videoMode.gravity = android.view.Gravity.CENTER
+        binding.audioMode.gravity = android.view.Gravity.CENTER
 
-        // A single blue capsule slides under the selected mode instead of two
-        // backgrounds swapping abruptly. Keep the indicator measured to the inner
-        // half-width so it remains accurate on narrow and wide devices.
         binding.modeContainer.post {
             if (_binding == null) return@post
             val container = binding.modeContainer
             val indicator = binding.modeIndicator
-            val slotWidth = ((container.width - container.paddingLeft - container.paddingRight) / 2)
-                .coerceAtLeast(1)
+            val slotWidth = ((container.width - container.paddingLeft - container.paddingRight) / 2).coerceAtLeast(1)
             val params = indicator.layoutParams
             val firstLayout = params.width != slotWidth
             params.width = slotWidth
             params.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT
             indicator.layoutParams = params
             val target = if (audioMode) slotWidth.toFloat() else 0f
-            if (firstLayout) {
-                indicator.translationX = target
-            } else {
+            if (firstLayout) indicator.translationX = target else {
                 indicator.animate().cancel()
-                indicator.animate()
-                    .translationX(target)
-                    .setDuration(520L)
-                    .setInterpolator(android.view.animation.OvershootInterpolator(0.72f))
-                    .start()
+                indicator.animate().translationX(target).setDuration(560L)
+                    .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1f, 0.36f, 1f)).start()
             }
         }
-        binding.videoMode.animate().cancel()
-        binding.audioMode.animate().cancel()
-        binding.videoMode.animate().alpha(if (audioMode) 0.68f else 1f).setDuration(220L).start()
-        binding.audioMode.animate().alpha(if (audioMode) 1f else 0.68f).setDuration(220L).start()
-        binding.videoMode.setTextColor(
-            if (audioMode) ContextCompat.getColor(requireContext(), R.color.dl_muted)
-            else Color.WHITE
-        )
-        binding.audioMode.setTextColor(
-            if (audioMode) Color.WHITE
-            else ContextCompat.getColor(requireContext(), R.color.dl_muted)
-        )
+
+        listOf(binding.videoMode, binding.audioMode).forEach { capsule ->
+            capsule.animate().cancel()
+            capsule.animate().scaleX(0.96f).scaleY(0.96f).setDuration(90L).withEndAction {
+                capsule.animate().scaleX(1f).scaleY(1f).setDuration(260L)
+                    .setInterpolator(android.view.animation.OvershootInterpolator(0.55f)).start()
+            }.start()
+        }
+        binding.videoMode.setTextColor(if (audioMode) onNormal else onSelected)
+        binding.audioMode.setTextColor(if (audioMode) onSelected else onNormal)
+        binding.videoMode.alpha = if (audioMode) 0.78f else 1f
+        binding.audioMode.alpha = if (audioMode) 1f else 0.78f
 
         val formats = if (audioMode) audioFormats else videoFormats
         // keep what the user picked; only fall back when it is not in this list

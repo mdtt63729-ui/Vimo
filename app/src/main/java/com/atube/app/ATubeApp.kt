@@ -11,11 +11,15 @@ import com.atube.app.helpers.PreferenceHelper
 import com.atube.app.helpers.ProxyHelper
 import com.atube.app.helpers.ShortcutHelper
 import com.atube.app.util.ExceptionHandler
+import com.atube.app.ui.effects.GlobalTouchEffects
 
 class ATubeApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+
+        // App-wide Material-style ripple and fluid press feedback for clickable Views.
+        GlobalTouchEffects.install(this)
 
         /**
          * Initialize the needed notification channels for DownloadService and BackgroundMode

@@ -1,33 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/onboardingRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground"
-    android:fillViewport="true">
+    android:background="?attr/colorSurface"
+    android:fillViewport="true"
+    android:overScrollMode="never">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingStart="24dp"
-        android:paddingTop="40dp"
+        android:paddingTop="28dp"
         android:paddingEnd="24dp"
         android:paddingBottom="28dp">
 
-        <ImageView
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:contentDescription="@null"
-            android:src="@mipmap/ic_launcher" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                app:cardBackgroundColor="?attr/colorSecondaryContainer"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp">
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="11dp"
+                    android:src="@mipmap/ic_launcher"
+                    android:contentDescription="@string/app_name" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="VIMO"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="13sp"
+                android:letterSpacing="0.16"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <com.google.android.material.chip.Chip
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="WELCOME"
+                android:textSize="10sp"
+                app:chipBackgroundColor="?attr/colorSecondaryContainer"
+                app:chipStrokeWidth="0dp"
+                app:ensureMinTouchTargetSize="false" />
+        </LinearLayout>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="@string/onb_title"
-            android:textColor="?android:attr/textColorPrimary"
-            android:textSize="28sp"
+            android:layout_marginTop="28dp"
+            android:text="Welcome to Vimo."
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="32sp"
+            android:fontFamily="sans"
+            android:letterSpacing="-0.025"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:text="Your video world starts here."
+            android:textColor="?attr/colorPrimary"
+            android:textSize="20sp"
             android:textStyle="bold" />
 
         <TextView
@@ -35,185 +87,333 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:lineSpacingExtra="3dp"
-            android:text="@string/onb_subtitle"
-            android:textColor="?android:attr/textColorSecondary"
+            android:text="Just a couple of quick settings before you explore."
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="15sp" />
 
-        <!-- permissions -->
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/permissionsCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            app:cardCornerRadius="22dp"
+            android:layout_marginTop="26dp"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
+            app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/dl_line"
+            app:strokeColor="?attr/colorOutlineVariant"
             app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="18dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Get everything ready"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:src="@drawable/ic_shield_check"
+                        app:tint="?attr/colorPrimary"
+                        android:contentDescription="@null" />
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/onb_permissions"
-                    android:textColor="?android:attr/textColorPrimary"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:layout_marginTop="4dp"
+                    android:text="Allow the essentials for a seamless experience."
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp" />
 
                 <LinearLayout
+                    android:id="@+id/storageRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:gravity="center_vertical"
+                    android:minHeight="68dp"
+                    android:orientation="horizontal"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingVertical="8dp">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="46dp"
+                        android:layout_height="46dp"
+                        app:cardBackgroundColor="?attr/colorSecondaryContainer"
+                        app:cardCornerRadius="15dp"
+                        app:cardElevation="0dp">
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:padding="12dp"
+                            android:src="@drawable/ic_download"
+                            app:tint="?attr/colorPrimary"
+                            android:contentDescription="@null" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="13dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Storage &amp; Downloads"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Save your favorite videos"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                    <ImageView
+                        android:id="@+id/storageStatus"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:visibility="invisible"
+                        android:src="@drawable/ic_onboarding_check"
+                        android:contentDescription="Ready" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="?attr/colorOutlineVariant" />
+
+                <LinearLayout
+                    android:id="@+id/installRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="68dp"
+                    android:orientation="horizontal"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingVertical="8dp">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="46dp"
+                        android:layout_height="46dp"
+                        app:cardBackgroundColor="?attr/colorSecondaryContainer"
+                        app:cardCornerRadius="15dp"
+                        app:cardElevation="0dp">
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:padding="12dp"
+                            android:src="@drawable/ic_play_next"
+                            app:tint="?attr/colorPrimary"
+                            android:contentDescription="@null" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="13dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="App Updates"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Allow Vimo to install its updates"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                    <ImageView
+                        android:id="@+id/installStatus"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:visibility="invisible"
+                        android:src="@drawable/ic_onboarding_check"
+                        android:contentDescription="Not allowed" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="?attr/colorOutlineVariant" />
+
+                <LinearLayout
+                    android:id="@+id/notificationRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="68dp"
+                    android:orientation="horizontal"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingVertical="8dp">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="46dp"
+                        android:layout_height="46dp"
+                        app:cardBackgroundColor="?attr/colorSecondaryContainer"
+                        app:cardCornerRadius="15dp"
+                        app:cardElevation="0dp">
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:padding="12dp"
+                            android:src="@drawable/ic_bell"
+                            app:tint="?attr/colorPrimary"
+                            android:contentDescription="@null" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="13dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Notifications"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="Download completion alerts"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                    <ImageView
+                        android:id="@+id/notificationStatus"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:visibility="invisible"
+                        android:src="@drawable/ic_onboarding_check"
+                        android:contentDescription="Not allowed" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/grantPermissionsButton"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
                     android:layout_marginTop="12dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_download"
-                        app:tint="@color/dl_muted" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:text="@string/onb_perm_storage"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:textSize="14sp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/storageButton"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="40dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:text="@string/onb_allow"
-                        android:textAllCaps="false"
-                        android:textSize="13sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_play_next"
-                        app:tint="@color/dl_muted" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:text="@string/onb_perm_install"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:textSize="14sp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/installButton"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="40dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:text="@string/onb_allow"
-                        android:textAllCaps="false"
-                        android:textSize="13sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_flag"
-                        app:tint="@color/dl_muted" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:text="@string/onb_perm_notifications"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:textSize="14sp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/notificationButton"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="40dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:text="@string/onb_allow"
-                        android:textAllCaps="false"
-                        android:textSize="13sp" />
-                </LinearLayout>
+                    android:text="Grant permissions"
+                    android:textAllCaps="false"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="26dp"
+                    app:icon="@drawable/ic_shield_check"
+                    app:iconGravity="textStart"
+                    app:iconPadding="9dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- country -->
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="@string/onb_country"
-            android:textColor="?android:attr/textColorPrimary"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_globe"
+                app:tint="?attr/colorPrimary"
+                android:contentDescription="@null" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="9dp"
+                android:text="Choose your region"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/onb_country_hint"
-            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginTop="5dp"
+            android:text="Your trending feed will be personalized by country."
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="13sp" />
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/countryLayout"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:hint="@string/onb_country">
+            android:layout_marginTop="12dp"
+            android:hint="Country"
+            app:boxCornerRadiusTopStart="18dp"
+            app:boxCornerRadiusTopEnd="18dp"
+            app:boxCornerRadiusBottomStart="18dp"
+            app:boxCornerRadiusBottomEnd="18dp"
+            app:startIconDrawable="@drawable/ic_globe">
 
             <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/countryInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="none" />
+                android:inputType="text"
+                android:completionThreshold="0"
+                android:paddingTop="17dp"
+                android:paddingBottom="17dp"
+                android:textSize="15sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/finishButton"
             android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:layout_marginTop="28dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:text="@string/onb_finish"
+            android:layout_height="58dp"
+            android:layout_marginTop="26dp"
+            android:text="Start exploring"
             android:textAllCaps="false"
-            android:textSize="15sp"
+            android:textSize="16sp"
             android:textStyle="bold"
-            app:cornerRadius="27dp" />
+            app:cornerRadius="29dp"
+            app:icon="@drawable/ic_arrow_forward"
+            app:iconGravity="textEnd"
+            app:iconPadding="10dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="13dp"
+            android:gravity="center"
+            android:text="Your experience. Your region. Your Vimo."
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="11sp" />
 
     </LinearLayout>
 </ScrollView>
