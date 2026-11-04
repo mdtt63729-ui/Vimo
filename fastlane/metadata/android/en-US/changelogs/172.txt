@@ -1,0 +1,4 @@
+Vimo 33.99
+
+- The in-app update popup is switched off. No build will show it until it is turned back
+  on deliberately.

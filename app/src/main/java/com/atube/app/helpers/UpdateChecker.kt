@@ -14,6 +14,16 @@ import org.json.JSONObject
  */
 object UpdateChecker {
 
+    /**
+     * Master switch for the in-app update popup.
+     *
+     * It is off: no build shows an update sheet, and nothing asks GitHub for a release.
+     * Flip this to true when updates should start appearing again - the popup, the
+     * download and the install are all still here and work; only this gate keeps them
+     * quiet.
+     */
+    const val UPDATES_ENABLED = false
+
     private const val RELEASES_URL =
         "https://api.github.com/repos/mdtt63729-ui/Vimo/releases/latest"
 
@@ -22,6 +32,8 @@ object UpdateChecker {
     private val client = OkHttpClient()
 
     suspend fun check(): Update? = withContext(Dispatchers.IO) {
+        // Silent while updates are switched off: no request, no sheet, no notification.
+        if (!UPDATES_ENABLED) return@withContext null
         runCatching {
             val request = Request.Builder()
                 .url(RELEASES_URL)
