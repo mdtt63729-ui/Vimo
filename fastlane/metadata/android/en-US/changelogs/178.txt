@@ -1,0 +1,4 @@
+Vimo 34.05
+
+- The selected category chip shows its own colour again. Making the chip non-checkable
+  had stopped the colour selector from ever matching.
