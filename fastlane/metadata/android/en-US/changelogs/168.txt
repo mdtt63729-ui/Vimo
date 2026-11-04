@@ -1,0 +1,4 @@
+Vimo 33.95
+
+- Playback keeps going when the screen turns off, and closing the small PiP window no
+  longer stops the song or video - it carries on in the background.

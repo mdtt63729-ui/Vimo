@@ -938,11 +938,9 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
             setVideoTrackTypeDisabled(true)
         }
 
-        // pause player if screen off or app is put the background, except when
-        // the user is intentionally entering PiP mode via the dedicated button
-        if (PlayerHelper.pausePlayerOnScreenOffEnabled && !isInteractive && !isEnteringPiPMode) {
-            playerController.pause()
-        }
+        // Playback carries on when the screen goes off: the audio keeps playing and the
+        // video track is simply dropped, which is the only thing the screen was showing.
+        // Pausing here is what stopped the song the moment the display slept.
 
         isEnteringPiPMode = false
 
@@ -1509,9 +1507,10 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
             binding.player.useController = true
 
             // close button got clicked in PiP mode
-            // pause the video and keep the app alive
+            // The PiP window was closed. Playback does not stop with it: the video or
+            // song carries on in the background, which is what was asked for. The app
+            // stays alive as before, so reopening it brings the player back.
             if (lifecycle.currentState == Lifecycle.State.CREATED) {
-                playerController.pause()
                 closedVideo = true
             }
 
