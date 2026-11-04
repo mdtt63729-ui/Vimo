@@ -1,0 +1,5 @@
+Vimo 33.96
+
+- Thumbnails no longer land in the Vimo folder as stray .jpg files; they live in the
+  app's own cache.
+- The download progress bar eases to each new value instead of jumping.

@@ -717,7 +717,16 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
 
         if (progress.status == "downloading") {
             row.downloadProgress.isIndeterminate = false
-            row.downloadProgress.progress = progress.percent.roundToInt().coerceIn(0, 100)
+            // Ease the bar to its new value instead of snapping: yt-dlp reports in
+            // coarse steps, and jumping 10 to 20 reads as a stutter.
+            val target = progress.percent.roundToInt().coerceIn(0, 100)
+            val bar = row.downloadProgress
+            android.animation.ValueAnimator.ofInt(bar.progress, target).apply {
+                duration = 320
+                interpolator = android.view.animation.DecelerateInterpolator()
+                addUpdateListener { bar.progress = it.animatedValue as Int }
+                start()
+            }
             val percent = progress.percent.roundToInt()
             val speed = YtDlpFetchAdapter.formatSize(progress.speedBytesPerSecond)
             row.downloadSize.text = buildString {
@@ -823,7 +832,11 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             val thumbFile = runCatching {
                 val url = fetchedVideo?.thumbnail?.takeIf { it.startsWith("http") }
                     ?: return@runCatching null
-                val out = File(directory.toFile(), "thumb_${videoId}.jpg")
+                // Thumbnails belong to the app, not to the user's folder: keeping them in
+                // the download folder left a .jpg beside every song. They live in the
+                // app's own cache now, where nothing else sees them.
+                val thumbDir = File(requireContext().cacheDir, "thumbs").apply { mkdirs() }
+                val out = File(thumbDir, "thumb_${videoId}.jpg")
                 java.net.URL(url).openStream().use { input ->
                     out.outputStream().use { input.copyTo(it) }
                 }
