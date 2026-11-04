@@ -218,6 +218,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:background="@drawable/bg_dl_card"
             android:orientation="vertical"
             android:padding="14dp"

@@ -108,9 +108,33 @@ class AudioPlayerFragment : Fragment(R.layout.fragment_audio_player), AudioPlaye
     }
 
     @SuppressLint("ClickableViewAccessibility")
+    /**
+     * Keeps the mini player clear of the navigation bar. Without this it sat flush
+     * against the bar on gesture-navigation phones and looked like it was floating in
+     * the wrong place; the gap now follows whatever inset the device reports.
+     */
+    private fun applyMiniPlayerInset(root: android.view.View) {
+        val base = (4 * resources.displayMetrics.density).toInt()
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val bottom = insets.getInsets(
+                androidx.core.view.WindowInsetsCompat.Type.navigationBars()
+            ).bottom
+            val lp = v.layoutParams as? android.view.ViewGroup.MarginLayoutParams
+            lp?.let {
+                it.bottomMargin = base + bottom
+                v.layoutParams = it
+            }
+            insets
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(root)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         _binding = FragmentAudioPlayerBinding.bind(view)
         super.onViewCreated(view, savedInstanceState)
+
+        // the mini player keeps its distance from the navigation bar
+        applyMiniPlayerInset(binding.miniPlayerControls)
 
         // manually apply additional padding for edge-to-edge compatibility
         activity.getSystemInsets()?.let { systemBars ->

@@ -1,0 +1,4 @@
+Vimo 34.01
+
+- The Download button is no longer clipped by its card.
+- The mini player keeps a proper gap above the navigation bar.
