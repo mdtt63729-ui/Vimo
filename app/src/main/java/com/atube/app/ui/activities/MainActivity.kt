@@ -169,8 +169,8 @@ class MainActivity : AbstractPlayerHostActivity() {
      * scrolling up brings it back. Small movements do not trigger it, so the bar does not
      * flicker while the finger is still deciding.
      */
-    fun handleFeedScroll(dy: Int) {
-        if (binding.appBarLayout.isVisible.not() && !headerHidden) return
+    fun handleFeedScroll(dy: Int): Boolean {
+        if (binding.appBarLayout.isVisible.not() && !headerHidden) return headerHidden
         headerAccum += dy
         if (headerHidden) {
             if (headerAccum < -12) {
@@ -182,7 +182,7 @@ class MainActivity : AbstractPlayerHostActivity() {
                     .setInterpolator(android.view.animation.DecelerateInterpolator())
                     .start()
             }
-            return
+            return headerHidden
         }
         if (headerAccum > 12) {
             headerHidden = true
@@ -196,6 +196,7 @@ class MainActivity : AbstractPlayerHostActivity() {
         } else if (headerAccum < -12) {
             headerAccum = 0
         }
+        return headerHidden
     }
 
     private fun setUpTelegramGate() {

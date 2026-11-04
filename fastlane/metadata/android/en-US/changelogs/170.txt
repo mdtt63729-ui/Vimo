@@ -1,0 +1,4 @@
+Vimo 33.97
+
+- The category row now slides away with the header instead of staying behind, and the
+  header hides on the Downloader page too, the same way it does on Home.

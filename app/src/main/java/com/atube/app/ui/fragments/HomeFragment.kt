@@ -100,7 +100,10 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     super.onScrolled(recyclerView, dx, dy)
                     // the header follows the feed: away on scroll down, back on scroll up
-                    (activity as? com.atube.app.ui.activities.MainActivity)?.handleFeedScroll(dy)
+                    val hidden = (activity as? com.atube.app.ui.activities.MainActivity)
+                        ?.handleFeedScroll(dy) ?: false
+                    // the category row travels with the header instead of staying behind
+                    moveCategoryRowWithHeader(hidden)
                     if (isLoadingMore) return
                     val lm = recyclerView.layoutManager as? LinearLayoutManager ?: return
                     val totalItems = lm.itemCount
@@ -170,6 +173,26 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
      * so referring to the adapter inside it is a forward reference.
      */
     /** Puts the list back where this category was scrolled to. */
+    private var categoryRowHidden = false
+
+    /** Slides the category chips away with the header, and back with it. */
+    private fun moveCategoryRowWithHeader(hidden: Boolean) {
+        if (hidden == categoryRowHidden) return
+        categoryRowHidden = hidden
+        val row = binding.categoryChips
+        row.animate().cancel()
+        row.animate()
+            .translationY(if (hidden) -row.height.toFloat() else 0f)
+            .alpha(if (hidden) 0f else 1f)
+            .setDuration(if (hidden) 240L else 220L)
+            .setInterpolator(
+                if (hidden) android.view.animation.AccelerateInterpolator()
+                else android.view.animation.DecelerateInterpolator()
+            )
+            .withEndAction { if (categoryRowHidden) row.translationY = 0f }
+            .start()
+    }
+
     private fun restoreScrollFor(category: String) {
         val position = homeViewModel.scrollPositionOf(category)
         if (position <= 0) return
