@@ -167,10 +167,13 @@ class HomeFeedAdapter(
             // Thumbnail: the skeleton keeps shimmering until the image is really
             // there, then Coil crossfades it in over the placeholder and the
             // shimmer is dropped. A thumbnail that never arrives keeps its skeleton.
-            ShimmerHelper.applyShimmer(thumbnail, cornerRadiusDp = 12f)
-            ImageHelper.loadImageHighQuality(video.thumbnail, thumbnail) { loaded ->
-                if (loaded) ShimmerHelper.stopShimmer(thumbnail)
-            }
+            // The shimmer was painted as the thumbnail's own background and only removed
+            // when the load reported success, so any load that failed - or never called
+            // back - left a grey block sitting over the picture for good. The image is
+            // loaded on its own now and the placeholder comes from the layout, so a
+            // thumbnail either arrives or leaves a plain empty box, never a stuck shimmer.
+            thumbnail.background = null
+            ImageHelper.loadImageHighQuality(video.thumbnail, thumbnail)
 
             // Load channel avatar if available
             if (!video.uploaderAvatar.isNullOrEmpty()) {

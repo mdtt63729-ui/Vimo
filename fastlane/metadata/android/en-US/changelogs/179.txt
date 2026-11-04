@@ -1,0 +1,5 @@
+Vimo 34.06
+
+- Thumbnails appear again: the shimmer placeholder was painted over the picture and only
+  removed on success, so a failed load left a grey block for good.
+- In-app updates are switched back on, with the release notes you have been writing.

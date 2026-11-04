@@ -22,7 +22,7 @@ object UpdateChecker {
      * download and the install are all still here and work; only this gate keeps them
      * quiet.
      */
-    const val UPDATES_ENABLED = false
+    const val UPDATES_ENABLED = true
 
     private const val RELEASES_URL =
         "https://api.github.com/repos/mdtt63729-ui/Vimo/releases/latest"
