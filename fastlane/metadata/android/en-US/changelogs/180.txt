@@ -1,0 +1,5 @@
+Vimo 34.07
+
+- The black sheet is gone: the player area follows the theme again instead of being
+  painted black.
+- The Vimo header sits higher and no longer paints an opaque band behind itself.
