@@ -53,9 +53,9 @@ object DownloadHelper {
      * own external folder so a download never fails for want of a directory.
      */
     /**
-     * Creates /storage/emulated/0/Vimo with its two subfolders and returns true when the
-     * public folder is really writable. Everything the app saves lives there, so the
-     * files survive an uninstall; deleting from inside the app removes them from here too.
+     * Creates /storage/emulated/0/Vimo and nothing inside it: every download - from the
+     * Downloader page or from the app itself - is written straight into that one folder.
+     * Returns true when the folder is really writable on this device.
      */
     fun ensureVimoFolder(): Boolean {
         val root = runCatching {
@@ -64,11 +64,19 @@ object DownloadHelper {
 
         return runCatching {
             root.mkdirs()
-            root.resolve(DOWNLOADER_DIR).mkdirs()
-            root.resolve(VIDEO_DIR).mkdirs()
             root.isDirectory && root.canWrite()
         }.getOrDefault(false)
     }
+
+    /** True when this device can actually write to the public Vimo folder. */
+    fun hasFolderAccess(context: Context): Boolean =
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            android.os.Environment.isExternalStorageManager()
+        } else {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
 
     /**
      * Tells Android's media database that a file exists. Without this the file is on
@@ -93,20 +101,25 @@ object DownloadHelper {
         }.getOrDefault(false)
     }
 
+    /**
+     * The folder every download goes into: /storage/emulated/0/Vimo, with no subfolders.
+     * The [path] argument is kept so existing callers do not change, but it is not used
+     * to nest anything - the user asked for one flat folder.
+     *
+     * Falls back to the app's own external folder only when the public one truly cannot
+     * be written, so a download never fails for want of a directory.
+     */
     fun getDownloadDir(context: Context, path: String): Path {
-        val publicRoot = runCatching {
-            android.os.Environment
-                .getExternalStorageDirectory()
-                .resolve("Vimo")
-                .resolve(path)
+        val root = runCatching {
+            android.os.Environment.getExternalStorageDirectory().resolve("Vimo")
         }.getOrNull()
 
-        if (publicRoot != null && runCatching {
-                publicRoot.mkdirs()
-                publicRoot.isDirectory && publicRoot.canWrite()
+        if (root != null && runCatching {
+                root.mkdirs()
+                root.isDirectory && root.canWrite()
             }.getOrDefault(false)
         ) {
-            return publicRoot.toPath()
+            return root.toPath()
         }
 
         val storageDir = try {
@@ -114,7 +127,7 @@ object DownloadHelper {
         } catch (e: Exception) {
             context.filesDir
         }
-        return (storageDir.toPath() / path).createDirectories()
+        return storageDir.toPath().createDirectories()
     }
 
     fun startDownloadService(context: Context, downloadData: DownloadData? = null) {

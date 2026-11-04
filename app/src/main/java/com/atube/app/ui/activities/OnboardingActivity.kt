@@ -148,10 +148,11 @@ class OnboardingActivity : BaseActivity() {
     }
 
     private fun requestStoragePermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Android 10+: files created by Vimo in Downloads use MediaStore.
+        // Android 11 and up cannot write a public folder at all without All files
+        // access, so that row does the asking. Android 7 to 10 use the ordinary
+        // storage permission, which is requested here.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             refreshPermissionStates(animateChanges = true)
-            Toast.makeText(this, "Downloads are ready — no storage permission is needed", Toast.LENGTH_SHORT).show()
             return
         }
         if (hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
@@ -234,8 +235,14 @@ class OnboardingActivity : BaseActivity() {
      */
     private fun requestFolderPermission() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            // Below Android 11 plain storage permission is enough.
-            requestStoragePermission()
+            // Android 7 to 10: the ordinary storage permission is enough, and once it is
+            // granted the folder is created here so the row shows the tick.
+            if (com.atube.app.helpers.DownloadHelper.hasFolderAccess(this)) {
+                com.atube.app.helpers.DownloadHelper.ensureVimoFolder()
+                refreshPermissionStates(animateChanges = true)
+            } else {
+                requestStoragePermission()
+            }
             return
         }
         if (android.os.Environment.isExternalStorageManager()) {
@@ -257,10 +264,8 @@ class OnboardingActivity : BaseActivity() {
 
     /** True when the Vimo folder can actually be written. */
     private fun folderReady(): Boolean =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
-            android.os.Environment.isExternalStorageManager() &&
-                com.atube.app.helpers.DownloadHelper.ensureVimoFolder()
-        else true
+        com.atube.app.helpers.DownloadHelper.hasFolderAccess(this) &&
+            com.atube.app.helpers.DownloadHelper.ensureVimoFolder()
 
     private fun refreshPermissionStates(animateChanges: Boolean) {
         // Vimo writes its own Downloads through MediaStore on Android 10+.

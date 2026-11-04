@@ -1,0 +1,6 @@
+Vimo 33.94
+
+- One flat Vimo folder at /storage/emulated/0/Vimo - no subfolders. Link downloads and
+  normal downloads both land directly in it.
+- Works from Android 7 to the newest release: storage permission on 7-10, All files
+  access on 11 and up.
