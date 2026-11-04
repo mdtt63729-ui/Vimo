@@ -113,17 +113,21 @@ class AudioPlayerFragment : Fragment(R.layout.fragment_audio_player), AudioPlaye
      * against the bar on gesture-navigation phones and looked like it was floating in
      * the wrong place; the gap now follows whatever inset the device reports.
      */
+    /**
+     * Lifts the mini player clear of the navigation bar.
+     *
+     * Its parent is a MotionLayout, which positions its children from a ConstraintSet -
+     * a bottom margin is simply ignored there, which is why the earlier attempt changed
+     * nothing. A translation is applied after layout instead, so the gap follows the
+     * inset the device reports.
+     */
     private fun applyMiniPlayerInset(root: android.view.View) {
-        val base = (4 * resources.displayMetrics.density).toInt()
+        val base = (6 * resources.displayMetrics.density)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
             val bottom = insets.getInsets(
                 androidx.core.view.WindowInsetsCompat.Type.navigationBars()
             ).bottom
-            val lp = v.layoutParams as? android.view.ViewGroup.MarginLayoutParams
-            lp?.let {
-                it.bottomMargin = base + bottom
-                v.layoutParams = it
-            }
+            v.translationY = -(base + bottom)
             insets
         }
         androidx.core.view.ViewCompat.requestApplyInsets(root)

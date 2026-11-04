@@ -726,12 +726,16 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             // coarse steps, and jumping 10 to 20 reads as a stutter.
             val target = progress.percent.roundToInt().coerceIn(0, 100)
             val bar = row.downloadProgress
-            android.animation.ValueAnimator.ofInt(bar.progress, target).apply {
-                duration = 320
-                interpolator = android.view.animation.DecelerateInterpolator()
+            // One animator per bar: starting a new one on every update stacked them and
+            // the bar ended up fighting itself, which is why it still looked jumpy.
+            (bar.getTag(R.id.downloadProgress) as? android.animation.ValueAnimator)?.cancel()
+            val animator = android.animation.ValueAnimator.ofInt(bar.progress, target).apply {
+                duration = 420
+                interpolator = android.view.animation.LinearInterpolator()
                 addUpdateListener { bar.progress = it.animatedValue as Int }
                 start()
             }
+            bar.setTag(R.id.downloadProgress, animator)
             val percent = progress.percent.roundToInt()
             val speed = YtDlpFetchAdapter.formatSize(progress.speedBytesPerSecond)
             row.downloadSize.text = buildString {
@@ -1049,7 +1053,12 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             this.height = height
         }
         binding.previewThumbnail.scaleType = if (video.isImage) android.widget.ImageView.ScaleType.FIT_CENTER else android.widget.ImageView.ScaleType.CENTER_CROP
-        ImageHelper.loadImageHighQuality(video.thumbnail, binding.previewThumbnail)
+        // Some sources hand back no thumbnail at all, and a blank box looked like a
+        // broken preview. A YouTube id can always be asked for its still frame.
+        val thumbUrl = video.thumbnail.takeIf { it.startsWith("http") }
+            ?: video.url.toID().takeIf { it.isNotBlank() }
+                ?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
+        ImageHelper.loadImageHighQuality(thumbUrl, binding.previewThumbnail)
 
         // video: the streams that already carry picture and sound
         videoFormats = items.filterIsInstance<YtDlpResult.Format>()

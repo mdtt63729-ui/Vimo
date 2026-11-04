@@ -1,0 +1,6 @@
+Vimo 34.03
+
+- The blank sheet before playback is gone: the video surface is drawn with the view
+  instead of punching a hole in the window.
+- A pasted link shows its thumbnail even when the source reports none.
+- The mini player keeps clear of the navigation bar, and the download bar eases smoothly.
