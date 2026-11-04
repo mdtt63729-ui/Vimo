@@ -1,0 +1,4 @@
+Vimo 34.04
+
+- The grey box inside the search bar is gone: the SearchView no longer draws its own
+  plate behind the magnifier.

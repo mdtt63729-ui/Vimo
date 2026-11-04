@@ -771,6 +771,20 @@ class MainActivity : AbstractPlayerHostActivity() {
         this.searchItem = searchItem
         searchView = searchItem.actionView as SearchView
 
+        // The SearchView draws its own dark "search plate" behind the magnifier, which
+        // showed as a grey box inside the toolbar. Both that and the text area are made
+        // transparent so only the icon and the text show.
+        runCatching {
+            val plateId = androidx.appcompat.R.id.search_plate
+            val textId = androidx.appcompat.R.id.search_src_text
+            searchView.findViewById<android.view.View>(plateId)?.setBackgroundColor(
+                android.graphics.Color.TRANSPARENT
+            )
+            searchView.findViewById<android.view.View>(textId)?.setBackgroundColor(
+                android.graphics.Color.TRANSPARENT
+            )
+        }
+
         // automatically set a different search icon in the playlists
         navController.addOnDestinationChangedListener { _, destination, _ ->
             currentSearchType = when (destination.id) {
