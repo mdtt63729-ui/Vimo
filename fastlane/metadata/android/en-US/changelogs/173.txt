@@ -1,0 +1,4 @@
+Vimo 34.00
+
+- The blank white sheet under the video is gone: the player area is painted black.
+- The update popup centres its speed and size, and its button is a capsule.
