@@ -1525,9 +1525,9 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
     }
 
     fun onUserLeaveHint() {
-        if (shouldStartPiP()) {
-            PictureInPictureCompat.enterPictureInPictureMode(requireActivity(), pipParams)
-        }
+        // Leaving the app does not open a PiP window. The user asked for playback to
+        // carry on in the background and for PiP to appear only when they choose it,
+        // so nothing happens here - the manual PiP button still works.
     }
 
     private val pipParams: PictureInPictureParamsCompat
@@ -1541,7 +1541,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
                         isPlaying
                     )
                 )
-                .setAutoEnterEnabled(isPlaying)
+                .setAutoEnterEnabled(false)
                 .apply {
                     if (isPlaying) {
                         setAspectRatio(playerController.videoSize)

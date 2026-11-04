@@ -1,0 +1,6 @@
+Vimo 33.93
+
+- Downloaded files are registered with Android's media database, so they show up in the
+  file manager and in music and gallery apps.
+- Leaving the app no longer forces a PiP window; playback carries on in the background
+  and PiP opens only from its button.

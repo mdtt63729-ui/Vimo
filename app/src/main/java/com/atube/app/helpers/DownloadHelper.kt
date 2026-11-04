@@ -70,6 +70,20 @@ object DownloadHelper {
         }.getOrDefault(false)
     }
 
+    /**
+     * Tells Android's media database that a file exists. Without this the file is on
+     * disk but the file manager, the gallery and music apps cannot see it - which is
+     * why downloads were missing from the file manager even though they had been saved.
+     */
+    fun notifyMediaScanner(context: Context, path: String?) {
+        if (path.isNullOrBlank()) return
+        runCatching {
+            android.media.MediaScannerConnection.scanFile(
+                context.applicationContext, arrayOf(path), null, null
+            )
+        }
+    }
+
     /** Deletes a downloaded file from the phone's storage, if it is still there. */
     fun deleteFile(path: String?): Boolean {
         if (path.isNullOrBlank()) return false

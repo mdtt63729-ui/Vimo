@@ -646,7 +646,14 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
             }
             poller.cancel()
 
-            if (produced != null) registerDownloadedFile(jobId, format, directory, produced)
+            if (produced != null) {
+                registerDownloadedFile(jobId, format, directory, produced)
+                // make the finished file visible to the file manager and media apps
+                DownloadHelper.notifyMediaScanner(
+                    requireContext(),
+                    if (produced.isNotBlank()) produced else null
+                )
+            }
             finishRow(jobId, produced != null)
         }
     }
