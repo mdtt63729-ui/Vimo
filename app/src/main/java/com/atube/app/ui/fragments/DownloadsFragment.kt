@@ -160,14 +160,7 @@ class DownloadsFragment : Fragment(R.layout.fragment_downloads) {
         // The Vimo header behaves the same here as on Home: away on scroll down, back on
         // scroll up. Each step is the difference since the last one, which is what the
         // handler expects.
-        var lastScrollY = 0
-        scroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
-            val dy = scrollY - lastScrollY
-            lastScrollY = scrollY
-            if (dy != 0) {
-                (activity as? com.atube.app.ui.activities.MainActivity)?.handleFeedScroll(dy)
-            }
-        }
+        // The header no longer hides on scroll here either.
         androidx.core.view.ViewCompat.requestApplyInsets(scroll)
 
         adapter = YtDlpFetchAdapter(

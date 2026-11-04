@@ -100,10 +100,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     super.onScrolled(recyclerView, dx, dy)
                     // the header follows the feed: away on scroll down, back on scroll up
-                    val hidden = (activity as? com.atube.app.ui.activities.MainActivity)
-                        ?.handleFeedScroll(dy) ?: false
-                    // the category row travels with the header instead of staying behind
-                    moveCategoryRowWithHeader(hidden)
+                    // The header and the category row stay where they are: they are
+                    // not hidden on scroll any more.
                     if (isLoadingMore) return
                     val lm = recyclerView.layoutManager as? LinearLayoutManager ?: return
                     val totalItems = lm.itemCount

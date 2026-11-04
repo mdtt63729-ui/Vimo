@@ -1,0 +1,4 @@
+Vimo 34.02
+
+- The header and the category row stay put again: they no longer hide when you scroll,
+  on Home or on the Downloader page.
