@@ -1299,6 +1299,13 @@ class CustomExoPlayerView(
             return
         }
 
+        // When the switch is off the swipe is left alone, so the player's own
+        // drag-to-mini-player gesture gets it instead - that is the Android 15 report.
+        if (!PlayerHelper.volumeSwipeEnabled) {
+            if (PlayerHelper.fullscreenGesturesEnabled) onSwipeCenterScreen(distanceY, positionY)
+            return
+        }
+
         if (isControllerFullyVisible) hideController()
         updateVolume(distanceY)
     }

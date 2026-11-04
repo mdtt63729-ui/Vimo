@@ -171,6 +171,13 @@ object PlayerHelper {
             true
         )
 
+    /** Swipe up and down on the right of the picture to change the volume. */
+    val volumeSwipeEnabled: Boolean
+        get() = PreferenceHelper.getBoolean(
+            PreferenceKeys.VOLUME_SWIPE_ENABLED,
+            true
+        )
+
     val pausePlayerOnScreenOffEnabled: Boolean
         get() = PreferenceHelper.getBoolean(
             PreferenceKeys.PAUSE_ON_SCREEN_OFF,

@@ -170,6 +170,13 @@
 
         <SwitchPreferenceCompat
             android:defaultValue="true"
+            android:icon="@drawable/ic_volume_up"
+            android:summary="@string/volumeSwipe_summary"
+            app:key="volume_swipe_enabled"
+            app:title="@string/volumeSwipe" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
             android:icon="@drawable/ic_play_circle"
             android:summary="@string/play_automatically_summary"
             app:key="play_automatically"

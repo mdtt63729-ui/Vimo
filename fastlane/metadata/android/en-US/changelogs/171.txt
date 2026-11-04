@@ -1,0 +1,4 @@
+Vimo 33.98
+
+- A new switch in Player settings: "Swipe to change volume". Turn it off and the swipe
+  is left to the player, which is what the Android 15 drag-to-mini-player report needs.
