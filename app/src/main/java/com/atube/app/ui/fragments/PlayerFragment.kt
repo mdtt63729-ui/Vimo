@@ -223,6 +223,19 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
     private var bufferingTimeoutTask: Runnable? = null
 
     private val playerListener = object : Player.Listener {
+        /**
+         * The first frame is the moment there is actually something to look at, so the
+         * spinner goes then and the picture fades in instead of appearing abruptly.
+         */
+        override fun onRenderedFirstFrame() {
+            super.onRenderedFirstFrame()
+            if (_binding == null) return
+            binding.videoLoading.animate().alpha(0f).setDuration(120).withEndAction {
+                binding.videoLoading.isGone = true
+            }.start()
+            binding.player.animate().alpha(1f).setDuration(220).start()
+        }
+
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             PictureInPictureCompat.setPictureInPictureParams(requireActivity(), pipParams)
 
@@ -538,6 +551,12 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
         }
 
         toggleVideoInfoVisibility(false)
+
+        // nothing is drawn yet, so the picture starts invisible behind the spinner and
+        // fades in when the first frame arrives
+        binding.player.alpha = 0f
+        binding.videoLoading.isGone = false
+        binding.videoLoading.alpha = 1f
     }
 
     private fun attachToPlayerService(playerData: PlayerData, startNewSession: Boolean) {

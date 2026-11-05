@@ -193,6 +193,17 @@
         app:show_buffering="when_playing"
         app:surface_type="texture_view" />
 
+    <ProgressBar
+        android:id="@+id/videoLoading"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_gravity="center"
+        android:indeterminateTint="@android:color/white"
+        app:layout_constraintBottom_toBottomOf="@id/main_container"
+        app:layout_constraintEnd_toEndOf="@id/main_container"
+        app:layout_constraintStart_toStartOf="@id/main_container"
+        app:layout_constraintTop_toTopOf="@id/main_container" />
+
     <ImageView
         android:id="@+id/close_imageView"
         android:layout_width="wrap_content"
