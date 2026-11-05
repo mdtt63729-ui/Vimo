@@ -22,7 +22,7 @@
 
     <!-- Skeleton placeholders on a dark screen. The light-mode #E6E6E6 is a glaring
          white slab on black; these sit just above the background instead. -->
-    <color name="skeleton_background">#1E1E22</color>
-    <color name="skeleton_bg">#1E1E22</color>
-    <color name="skeleton_highlight">#2C2C33</color>
+    <color name="skeleton_background">#2B2B31</color>
+    <color name="skeleton_bg">#2B2B31</color>
+    <color name="skeleton_highlight">#3E3E47</color>
 </resources>

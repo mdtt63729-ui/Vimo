@@ -1,0 +1,4 @@
+Vimo 34.12
+
+- The blank column under the video is the loading skeleton again: its dark-mode colour was
+  almost the same as the page behind it, so the placeholder was there but invisible.
