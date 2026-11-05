@@ -1,0 +1,4 @@
+Vimo 34.18
+
+- A spinner turns over the video while it loads, and the picture fades in on the first
+  frame instead of appearing abruptly.

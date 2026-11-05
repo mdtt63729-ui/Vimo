@@ -230,12 +230,12 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
         override fun onRenderedFirstFrame() {
             super.onRenderedFirstFrame()
             if (_binding == null) return
-            _binding?.let { b ->
-                b.videoLoading.animate().alpha(0f).setDuration(120).withEndAction {
-                    b.videoLoading.isGone = true
-                }.start()
-                b.player.animate().alpha(1f).setDuration(220).start()
-            }
+            val b = _binding ?: return
+            val spinner = b.root.findViewById<android.widget.ProgressBar>(R.id.videoLoading)
+            spinner?.animate()?.alpha(0f)?.setDuration(120)?.withEndAction {
+                spinner.isGone = true
+            }?.start()
+            b.player.animate().alpha(1f).setDuration(220).start()
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -556,10 +556,10 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
 
         // nothing is drawn yet, so the picture starts invisible behind the spinner and
         // fades in when the first frame arrives
-        _binding?.let { b ->
-            b.player.alpha = 0f
-            b.videoLoading.isGone = false
-            b.videoLoading.alpha = 1f
+        binding.player.alpha = 0f
+        binding.root.findViewById<android.widget.ProgressBar>(R.id.videoLoading)?.apply {
+            isGone = false
+            alpha = 1f
         }
     }
 
