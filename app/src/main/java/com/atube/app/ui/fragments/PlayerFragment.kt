@@ -959,6 +959,12 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
 
         // re-enable and load video stream
         setVideoTrackTypeDisabled(false)
+
+        // The details column was left blank after the first load and only came back
+        // after minimising and returning. Re-asserting it here means a view that was
+        // rebuilt is filled in straight away instead of staying empty until the next
+        // trip through the mini player.
+        if (infoLoaded) toggleVideoInfoVisibility(true)
     }
 
     private fun setAutoPlayCountdownEnabled(enabled: Boolean) {
@@ -1152,10 +1158,13 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
      * `GONE` rather than `INVISIBLE` - otherwise they would still reserve their
      * height and leave a blank gap under the skeleton.
      */
+    private var infoLoaded = false
+
     private fun toggleVideoInfoVisibility(show: Boolean) {
         binding.descriptionLayout.collapseDescription()
 
         if (show) {
+            infoLoaded = true
             binding.descriptionLayout.isGone = false
             binding.optionsScroll?.isGone = false
             binding.relatedRecView.isGone = false

@@ -160,11 +160,24 @@ object UpdateInstaller {
 
     private fun install(context: Context, apk: File) {
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apk)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
+        // ACTION_INSTALL_PACKAGE is the request the package installer actually answers;
+        // ACTION_VIEW on an APK can open a chooser that goes nowhere, which is the
+        // "shows Install but nothing happens" report.
+        val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+            data = uri
+            putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCES, true)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        runCatching { context.startActivity(intent) }
+        val started = runCatching { context.startActivity(intent) }.isSuccess
+        if (!started) {
+            // fall back to the view intent for installers that only accept that
+            runCatching {
+                context.startActivity(Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+            }
+        }
     }
 
     private fun ensureChannel(context: Context) {
