@@ -173,7 +173,12 @@ class HomeFeedAdapter(
             // loaded on its own now and the placeholder comes from the layout, so a
             // thumbnail either arrives or leaves a plain empty box, never a stuck shimmer.
             thumbnail.background = null
-            ImageHelper.loadImageHighQuality(video.thumbnail, thumbnail)
+            // Whatever the source did or did not report, a video id always has a still
+            // frame. Without this a blank thumbnail field meant a blank card, silently.
+            val thumbUrl = video.thumbnail?.takeIf { it.startsWith("http") }
+                ?: video.url.toID().takeIf { it.isNotBlank() }
+                    ?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
+            ImageHelper.loadImageHighQuality(thumbUrl, thumbnail)
 
             // Load channel avatar if available
             if (!video.uploaderAvatar.isNullOrEmpty()) {

@@ -1,0 +1,4 @@
+Vimo 34.10
+
+- Feed thumbnails are built from the video id when the source reports none, so a blank
+  thumbnail field can no longer leave an empty card.
