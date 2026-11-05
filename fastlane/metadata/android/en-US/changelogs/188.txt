@@ -1,0 +1,5 @@
+Vimo 34.15
+
+- The update really installs: it asks the package installer directly instead of opening a
+  viewer that goes nowhere.
+- The details column under the video fills in as soon as the screen resumes.

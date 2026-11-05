@@ -165,7 +165,6 @@ object UpdateInstaller {
         // "shows Install but nothing happens" report.
         val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
             data = uri
-            putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCES, true)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         val started = runCatching { context.startActivity(intent) }.isSuccess
