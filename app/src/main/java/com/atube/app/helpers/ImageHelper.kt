@@ -220,7 +220,7 @@ object ImageHelper {
         onError: (() -> Unit)? = null,
         onResult: ((Boolean) -> Unit)? = null,
     ) {
-        target.load(url) {
+        target.load(url, imageLoader) {
             // A slightly longer fade than Coil's default, so a thumbnail slides in
             // over the skeleton instead of popping.
             crossfade(250)

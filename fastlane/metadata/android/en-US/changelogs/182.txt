@@ -1,0 +1,4 @@
+Vimo 34.09
+
+- Thumbnails load again: images now go through the app's own configured loader instead of
+  Coil's shared singleton, which could end up without a network fetcher.

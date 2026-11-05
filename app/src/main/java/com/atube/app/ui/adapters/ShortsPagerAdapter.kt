@@ -180,7 +180,8 @@ class ShortsPagerAdapter(
 
             // Load channel avatar
             item.uploaderAvatar?.let { avatarUrl ->
-                binding.shortChannelAvatar.load(avatarUrl) { crossfade(true) }
+                // through ImageHelper, so it uses the loader that has a network fetcher
+                com.atube.app.helpers.ImageHelper.loadImage(avatarUrl, binding.shortChannelAvatar)
             }
 
             // The provider exposes view counts, not like/comment counts. Keep
