@@ -1,73 +1,99 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The listening sheet: a dim scrim, a pulsing microphone and the words as they
-     arrive, so the user sees what is being heard before it is searched. -->
+<!--
+  The listening sheet.
+
+  A soft card rather than a plain overlay: two rings behind the microphone that react to
+  the voice, the words arriving underneath, and a quiet hint line. Everything here is
+  animated from VoiceSearchController - the layout only provides the shapes.
+-->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/voiceRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#CC000000"
+    android:background="#E6000000"
     android:clickable="true"
     android:focusable="true">
 
     <LinearLayout
+        android:id="@+id/voiceCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:gravity="center"
+        android:layout_marginHorizontal="24dp"
+        android:background="@drawable/bg_voice_card"
+        android:gravity="center_horizontal"
         android:orientation="vertical"
-        android:paddingHorizontal="32dp">
+        android:paddingHorizontal="26dp"
+        android:paddingVertical="30dp">
 
         <FrameLayout
-            android:layout_width="120dp"
-            android:layout_height="120dp">
+            android:layout_width="150dp"
+            android:layout_height="150dp">
+
+            <View
+                android:id="@+id/voiceRingOuter"
+                android:layout_width="150dp"
+                android:layout_height="150dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_voice_ring_outer" />
 
             <View
                 android:id="@+id/voicePulse"
-                android:layout_width="120dp"
-                android:layout_height="120dp"
+                android:layout_width="108dp"
+                android:layout_height="108dp"
+                android:layout_gravity="center"
                 android:background="@drawable/bg_voice_pulse" />
 
-            <ImageView
-                android:id="@+id/voiceMic"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
+            <FrameLayout
+                android:layout_width="68dp"
+                android:layout_height="68dp"
                 android:layout_gravity="center"
-                android:contentDescription="@string/voice_search"
-                android:src="@drawable/ic_mic"
-                app:tint="@android:color/white" />
+                android:background="@drawable/bg_voice_mic_circle">
+
+                <ImageView
+                    android:id="@+id/voiceMic"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@string/voice_search"
+                    android:src="@drawable/ic_mic"
+                    app:tint="@android:color/white" />
+            </FrameLayout>
         </FrameLayout>
 
         <TextView
             android:id="@+id/voiceHint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
+            android:layout_marginTop="24dp"
+            android:letterSpacing="0.04"
             android:text="@string/voice_listening"
-            android:textColor="@android:color/white"
-            android:textSize="15sp" />
+            android:textAllCaps="true"
+            android:textColor="#B3FFFFFF"
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/voiceText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="12dp"
             android:gravity="center"
-            android:minHeight="60dp"
+            android:minHeight="72dp"
             android:textColor="@android:color/white"
-            android:textSize="22sp"
+            android:textSize="23sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/voiceCancel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp"
+            android:layout_marginTop="22dp"
+            android:background="@drawable/bg_voice_cancel"
+            android:paddingHorizontal="26dp"
+            android:paddingVertical="11dp"
             android:text="@string/cancel"
-            android:textColor="#DDDDDD"
-            android:textSize="14sp" />
+            android:textColor="#E6FFFFFF"
+            android:textSize="13sp" />
     </LinearLayout>
 </FrameLayout>

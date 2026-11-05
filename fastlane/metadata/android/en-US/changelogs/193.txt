@@ -1,0 +1,4 @@
+Vimo 34.20
+
+- The voice sheet is rebuilt: a soft card, rings that breathe with your voice, and a
+  microphone that settles into place. Each phrase fades and lifts in as it is heard.
