@@ -122,6 +122,7 @@ class MainActivity : AbstractPlayerHostActivity() {
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { granted -> if (granted) voiceSearch.start() }
     private lateinit var searchItem: MenuItem
+    private var voiceItem: MenuItem? = null
     private var savedSearchQuery: String? = null
     private var shouldOpenSuggestions = true
     private var currentSearchType: SearchType = SearchType.ONLINE
@@ -363,8 +364,15 @@ class MainActivity : AbstractPlayerHostActivity() {
             // Reuse Vimo's existing app bar as the compact Shorts header. Search
             // remains the existing toolbar action; Cast is omitted because this
             // project has no supported Cast integration.
-            binding.toolbarBrand.isVisible = !isShortsDestination
-            binding.toolbarTitle.isVisible = isShortsDestination
+            // The microphone is a search tool, so it appears on the search screens and
+            // nowhere else - not on Home, Shorts, the Downloader or any other page.
+            val onSearchScreen = destination.id == R.id.searchFragment ||
+                destination.id == R.id.searchResultFragment
+            voiceItem?.isVisible = onSearchScreen
+
+            // Brand and title swap with a short cross-fade instead of blinking in and
+            // out, which read as a flicker when moving between pages.
+            crossFadeHeader(showBrand = !isShortsDestination)
             if (isShortsDestination) binding.toolbarTitle.text = getString(R.string.shorts)
         }
 
@@ -790,11 +798,47 @@ class MainActivity : AbstractPlayerHostActivity() {
         searchView.clearFocus()
     }
 
+    /**
+     * Swaps the wordmark and the page title with a quick cross-fade. 160ms is short
+     * enough to feel immediate, and fading rather than toggling visibility stops the
+     * header from blinking on every navigation.
+     */
+    private fun crossFadeHeader(showBrand: Boolean) {
+        val brand = binding.toolbarBrand
+        val title = binding.toolbarTitle
+
+        val brandWanted = showBrand
+        val titleWanted = !showBrand
+        if (brand.isVisible == brandWanted && title.isVisible == titleWanted) return
+
+        brand.animate().cancel()
+        title.animate().cancel()
+
+        if (brandWanted) {
+            title.animate().alpha(0f).setDuration(90).withEndAction {
+                title.isVisible = false
+                title.alpha = 1f
+            }.start()
+            brand.alpha = 0f
+            brand.isVisible = true
+            brand.animate().alpha(1f).setDuration(160).start()
+        } else {
+            brand.animate().alpha(0f).setDuration(90).withEndAction {
+                brand.isVisible = false
+                brand.alpha = 1f
+            }.start()
+            title.alpha = 0f
+            title.isVisible = true
+            title.animate().alpha(1f).setDuration(160).start()
+        }
+    }
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.action_bar, menu)
 
         // stuff for the search in the topBar
+        voiceItem = menu.findItem(R.id.action_voice)
         val searchItem = menu.findItem(R.id.action_search)
         this.searchItem = searchItem
         searchView = searchItem.actionView as SearchView

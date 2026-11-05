@@ -1,0 +1,4 @@
+Vimo 34.19
+
+- The microphone appears on the search screen only.
+- The header cross-fades between the Vimo wordmark and a page title instead of blinking.
