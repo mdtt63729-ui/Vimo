@@ -30,10 +30,10 @@ class AboutActivity : BaseActivity() {
         }
 
         setupCard(binding.donate, DONATE_URL)
-        setupCard(binding.website, WEBSITE_URL)
-        setupCard(binding.piped, PIPED_GITHUB_URL)
-        setupCard(binding.translate, WEBLATE_URL)
+        setupCard(binding.website, GITHUB_URL)
         setupCard(binding.github, GITHUB_URL)
+
+        setupCard(binding.reportBugs, TELEGRAM_URL)
 
         binding.license.setOnClickListener {
             showLicense()
@@ -109,9 +109,10 @@ class AboutActivity : BaseActivity() {
     }
 
     companion object {
-        const val DONATE_URL = "https://github.com/a-tube/A-Tube#donate"
+        const val DONATE_URL = "https://github.com/mdtt63729-ui/Vimo"
         private const val WEBSITE_URL = "https://a-tube.app"
-        const val GITHUB_URL = "https://github.com/a-tube/A-Tube"
+        const val GITHUB_URL = "https://github.com/mdtt63729-ui/Vimo"
+        private const val TELEGRAM_URL = "https://t.me/+QSRUoomeOJ9mMmNl"
         private const val PIPED_GITHUB_URL = "https://github.com/TeamPiped/Piped"
         private const val WEBLATE_URL = "https://hosted.weblate.org/engage/a-tube/"
         private const val LICENSE_URL = "https://gnu.org/"

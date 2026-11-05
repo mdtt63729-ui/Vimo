@@ -17,9 +17,15 @@
             android:fitsSystemWindows="true"
             app:title="@string/about" />
 
-        <com.atube.app.ui.views.AppIconHeader
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+        <ImageView
+            android:id="@+id/appLogo"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"
+            android:contentDescription="@string/app_name"
+            android:src="@drawable/ic_vimo_logo" />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/donate"
@@ -55,24 +61,13 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/piped"
+            android:id="@+id/reportBugs"
             style="@style/AboutCard">
 
             <androidx.appcompat.widget.AppCompatTextView
                 style="@style/AboutItem"
-                android:text="@string/piped"
-                app:drawableStartCompat="@drawable/ic_piped" />
-
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/translate"
-            style="@style/AboutCard">
-
-            <androidx.appcompat.widget.AppCompatTextView
-                style="@style/AboutItem"
-                android:text="@string/translate"
-                app:drawableStartCompat="@drawable/ic_weblate" />
+                android:text="@string/report_bugs"
+                app:drawableStartCompat="@drawable/ic_bug" />
 
         </com.google.android.material.card.MaterialCardView>
 
