@@ -176,7 +176,7 @@ class HomeFeedAdapter(
             // Whatever the source did or did not report, a video id always has a still
             // frame. Without this a blank thumbnail field meant a blank card, silently.
             val thumbUrl = video.thumbnail?.takeIf { it.startsWith("http") }
-                ?: video.url.toID().takeIf { it.isNotBlank() }
+                ?: video.url?.toID()?.takeIf { it.isNotBlank() }
                     ?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
             ImageHelper.loadImageHighQuality(thumbUrl, thumbnail)
 
