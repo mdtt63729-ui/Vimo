@@ -1,5 +1,6 @@
 package com.atube.app.ui.activities
 
+import android.Manifest
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
@@ -114,6 +115,12 @@ class MainActivity : AbstractPlayerHostActivity() {
 
     // search related stuff
     private lateinit var searchView: SearchView
+    private val voiceSearch by lazy {
+        com.atube.app.helpers.VoiceSearchController(this) { text -> runVoiceQuery(text) }
+    }
+    private val voicePermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) voiceSearch.start() }
     private lateinit var searchItem: MenuItem
     private var savedSearchQuery: String? = null
     private var shouldOpenSuggestions = true
@@ -760,6 +767,27 @@ class MainActivity : AbstractPlayerHostActivity() {
             return
         }
         super.invalidateMenu()
+    }
+
+    /** The microphone in the search bar: listen, then search what was heard. */
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        if (item.itemId == R.id.action_voice) {
+            if (voiceSearch.hasPermission()) {
+                voiceSearch.start()
+            } else {
+                voicePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    private fun runVoiceQuery(text: String) {
+        // the query is put into the search field and submitted, so the result is exactly
+        // what typing it and pressing search would have produced
+        if (!searchItem.isActionViewExpanded) searchItem.expandActionView()
+        searchView.setQuery(text, true)
+        searchView.clearFocus()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

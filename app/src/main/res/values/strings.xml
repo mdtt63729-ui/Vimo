@@ -724,4 +724,7 @@
     <string name="update_exit_message">The download will pause. You can resume it later without downloading the completed part again.</string>
     <string name="volumeSwipe">Swipe to change volume</string>
     <string name="volumeSwipe_summary">Swipe up or down on the right of the picture. Turn this off to leave that gesture to the player.</string>
+    <string name="voice_search">Voice search</string>
+    <string name="voice_listening">Listening</string>
+    <string name="voice_no_speech">Did not catch that</string>
 </resources>

@@ -1,0 +1,5 @@
+Vimo 34.08
+
+- A microphone in the search bar: it dims the screen, shows a pulsing mic and writes the
+  words as they are heard. When you stop for two seconds the text goes into the search
+  field and the search runs by itself.

@@ -11,6 +11,12 @@
         app:showAsAction="ifRoom|collapseActionView" />
 
     <item
+        android:id="@+id/action_voice"
+        android:icon="@drawable/ic_mic"
+        android:title="@string/voice_search"
+        app:showAsAction="always" />
+
+    <item
         android:id="@+id/action_settings"
         android:title="@string/settings"
         app:showAsAction="never" />
