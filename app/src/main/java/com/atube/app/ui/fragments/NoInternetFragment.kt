@@ -25,8 +25,16 @@ class NoInternetFragment: Fragment(R.layout.fragment_nointernet) {
         }
 
         binding.downloads.setOnClickListener {
-            // the library's downloads, not the Downloader tab
-            findNavController().navigate(R.id.downloadsLibraryFragment)
+            // The library's downloads, not the Downloader tab. This screen sits in its own
+            // navigation graph, where downloadsLibraryFragment does not exist - asking for
+            // it there threw IllegalArgumentException and took the app down. If the
+            // destination is not in this graph, the main app is opened instead.
+            val navigated = runCatching {
+                findNavController().navigate(R.id.downloadsLibraryFragment)
+            }.isSuccess
+            if (!navigated) {
+                com.atube.app.helpers.NavigationHelper.restartMainActivity(requireContext())
+            }
         }
     }
 }

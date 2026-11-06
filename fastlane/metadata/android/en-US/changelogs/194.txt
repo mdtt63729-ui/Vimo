@@ -1,0 +1,4 @@
+Vimo 34.21
+
+- Fixed a crash on the no-internet screen: the Downloads button asked for a destination
+  that does not exist in that screen's navigation graph.
