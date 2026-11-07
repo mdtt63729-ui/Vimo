@@ -236,7 +236,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
                 spinner.isGone = true
             }?.start()
             b.player.animate().alpha(1f).setDuration(220).start()
-            b.videoPoster.animate().alpha(0f).setDuration(260).start()
+            b.videoPoster?.animate()?.alpha(0f)?.setDuration(260)?.start()
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -1337,7 +1337,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
             val posterUrl = streams.thumbnailUrl.takeIf { it.startsWith("http") }
                 ?: videoId.takeIf { it.isNotBlank() }
                     ?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
-            ImageHelper.loadImageHighQuality(posterUrl, binding.videoPoster)
+            binding.videoPoster?.let { ImageHelper.loadImageHighQuality(posterUrl, it) }
         }
 
         toggleVideoInfoVisibility(true)
