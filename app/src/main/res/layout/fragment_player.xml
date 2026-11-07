@@ -179,6 +179,20 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- The still frame sits behind the player, so the first thing you see is the video's
+         own picture rather than a black rectangle while it loads. -->
+    <ImageView
+        android:id="@+id/videoPoster"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@android:color/black"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        app:layout_constraintBottom_toBottomOf="@id/main_container"
+        app:layout_constraintEnd_toEndOf="@id/main_container"
+        app:layout_constraintStart_toStartOf="@id/main_container"
+        app:layout_constraintTop_toTopOf="@id/main_container" />
+
     <com.atube.app.ui.views.CustomExoPlayerView
         android:id="@+id/player"
         android:layout_width="0dp"

@@ -1,0 +1,4 @@
+Vimo 34.22
+
+- Opening a video shows its own still frame instead of a black rectangle while it loads,
+  then fades into the picture when the first frame arrives.
